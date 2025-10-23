@@ -1,0 +1,53 @@
+{
+  "name": "tauri-notice-window",
+  "version": "1.0.0",
+  "description": "A reusable React library for cross-window notification management in Tauri v2+ applications",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build && tsc --emitDeclarationOnly --outDir dist",
+    "dev": "vite build --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "tauri",
+    "react",
+    "notification",
+    "window",
+    "queue",
+    "zustand",
+    "cross-window"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.0",
+    "dexie": "^4.2.1",
+    "zustand": "^5.0.8",
+    "zustand-sync": "^0.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

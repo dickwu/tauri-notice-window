@@ -1,0 +1,29 @@
+# Source files (only dist should be published)
+src/
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+
+# Documentation (keep in package)
+!README.md
+!LICENSE
+!CHANGELOG.md
+
+# Development files
+.vscode/
+.idea/
+*.log
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Examples and contributing
+EXAMPLES.md
+CONTRIBUTING.md
+docs/
+
+# Build artifacts
+*.tsbuildinfo
+
