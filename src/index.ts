@@ -7,7 +7,8 @@
 export type { MessageType, StoredMessage, NoticeConfig, WindowPosition } from './types/message'
 
 // Store
-export { useMessageQueueStore, messageQueueSelectors } from './stores/messageQueueStore'
+import { useMessageQueueStore, messageQueueSelectors } from './stores/messageQueueStore'
+export { useMessageQueueStore, messageQueueSelectors }
 
 // Hooks
 export { useNoticeWindow } from './hooks/useNoticeWindow'
@@ -23,14 +24,20 @@ export { NoticeLayout } from './components/NoticeLayout'
 export { setNoticeConfig, getNoticeConfig } from './config/noticeConfig'
 
 // Utils
-export { 
+import { 
   initializeNoticeWindowSystem,
   createNoticeWindow,
   closeNoticeWindow,
   closeAllNoticeWindows,
 } from './utils/noticeWindow'
-
 export { 
+  initializeNoticeWindowSystem,
+  createNoticeWindow,
+  closeNoticeWindow,
+  closeAllNoticeWindows,
+}
+
+import { 
   initializeDatabase,
   saveMessage,
   hasMessage,
@@ -40,6 +47,16 @@ export {
   markAsHidden,
   clearPendingMessages,
 } from './utils/db'
+export { 
+  initializeDatabase,
+  saveMessage,
+  hasMessage,
+  getPendingMessages,
+  getMessage,
+  markAsShown,
+  markAsHidden,
+  clearPendingMessages,
+}
 
 /**
  * Initialize the complete notice window system
@@ -55,10 +72,6 @@ export {
  * ```
  */
 export const initializeNoticeSystem = async (): Promise<void> => {
-  const { initializeDatabase } = await import('./utils/db')
-  const { initializeNoticeWindowSystem } = await import('./utils/noticeWindow')
-  const { useMessageQueueStore } = await import('./stores/messageQueueStore')
-
   // Initialize database
   initializeDatabase()
 

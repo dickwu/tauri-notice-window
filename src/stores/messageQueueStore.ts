@@ -1,5 +1,5 @@
-import { create } from 'zustand'
-import { sync } from 'zustand-sync'
+import { create, StateCreator } from 'zustand'
+import { syncTabs } from 'zustand-sync'
 import type { MessageType } from '../types/message'
 import {
   getPendingMessages,
@@ -40,9 +40,7 @@ interface MessageQueueState {
 /**
  * Zustand store with zustand-sync for cross-window state management
  */
-export const useMessageQueueStore = create<MessageQueueState>()(
-  sync(
-    (set, get) => ({
+const storeCreator: StateCreator<MessageQueueState> = (set, get) => ({
       // Initial state
       queue: [],
       currentMessage: null,
@@ -61,7 +59,7 @@ export const useMessageQueueStore = create<MessageQueueState>()(
         }
 
         // Add to queue if not already present
-        const alreadyInQueue = state.queue.some((m) => m.id === message.id)
+        const alreadyInQueue = state.queue.some((m: MessageType) => m.id === message.id)
         if (!alreadyInQueue) {
           const newQueue = [...state.queue, message]
           set({ queue: newQueue })
@@ -160,7 +158,7 @@ export const useMessageQueueStore = create<MessageQueueState>()(
       // Persist queue to database
       persistQueue: async () => {
         const state = get()
-        const positions = state.queue.map((msg, index) => ({
+        const positions = state.queue.map((msg: MessageType, index: number) => ({
           id: msg.id,
           position: index,
         }))
@@ -193,7 +191,7 @@ export const useMessageQueueStore = create<MessageQueueState>()(
         const state = get()
         const normalizedId = String(id)
         set({
-          activeWindowIds: state.activeWindowIds.filter((wid) => wid !== normalizedId),
+          activeWindowIds: state.activeWindowIds.filter((wid: string) => wid !== normalizedId),
         })
       },
 
@@ -203,12 +201,12 @@ export const useMessageQueueStore = create<MessageQueueState>()(
         const normalizedId = String(id)
         return state.activeWindowIds.includes(normalizedId)
       },
-    }),
-    {
+})
+
+export const useMessageQueueStore = create<MessageQueueState>()(
+  syncTabs(storeCreator, {
       name: 'tauri-notice-queue',
-      storage: 'local',
-    }
-  )
+  })
 )
 
 /**

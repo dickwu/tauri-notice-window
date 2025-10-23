@@ -1,6 +1,6 @@
 {
   "name": "tauri-notice-window",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A reusable React library for cross-window notification management in Tauri v2+ applications",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -32,6 +32,14 @@
   ],
   "author": "",
   "license": "MIT",
+  "homepage": "https://github.com/dickwu/tauri-notice-window",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dickwu/tauri-notice-window.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dickwu/tauri-notice-window/issues"
+  },
   "peerDependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
