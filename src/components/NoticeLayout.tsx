@@ -14,13 +14,17 @@ interface NoticeLayoutProps {
    * Optional callback when message is loaded
    */
   onLoad?: (message: MessageType) => void
+  /**
+   * Optional callback when window is closed
+   */
+  onClose?: (message: MessageType) => void
 }
 
 /**
  * Layout component for notice windows
  * Loads the message from database/URL and provides it to children
  */
-export const NoticeLayout = ({ children, onLoad }: NoticeLayoutProps) => {
+export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) => {
   const [message, setMessage] = useState<MessageType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +67,21 @@ export const NoticeLayout = ({ children, onLoad }: NoticeLayoutProps) => {
 
     loadMessage()
   }, [onLoad])
+
+  // Handle window close event
+  useEffect(() => {
+    if (!message || !onClose) return
+
+    const handleBeforeUnload = () => {
+      onClose(message)
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [message, onClose])
 
   if (loading) {
     return (

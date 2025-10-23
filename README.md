@@ -193,9 +193,13 @@ Wrapper component for notice pages that loads the message and provides it to chi
 interface NoticeLayoutProps {
   children: (message: MessageType) => ReactNode
   onLoad?: (message: MessageType) => void
+  onClose?: (message: MessageType) => void
 }
 
-<NoticeLayout onLoad={(msg) => console.log('Loaded:', msg)}>
+<NoticeLayout 
+  onLoad={(msg) => console.log('Loaded:', msg)}
+  onClose={(msg) => console.log('Closing:', msg)}
+>
   {(message) => <YourCustomUI message={message} />}
 </NoticeLayout>
 ```
