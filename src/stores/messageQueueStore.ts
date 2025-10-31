@@ -8,6 +8,7 @@ import {
   clearPendingMessages,
   updateQueuePositions,
   hasMessage,
+  isMessageShown,
 } from '../utils/db'
 
 /**
@@ -52,6 +53,13 @@ const storeCreator: StateCreator<MessageQueueState> = (set, get) => ({
       enqueue: async (message: MessageType) => {
         const state = get()
         
+        // Reject messages that were already shown - they should never reappear
+        const alreadyShown = await isMessageShown(message.id)
+        if (alreadyShown) {
+          console.log(`Message ${message.id} was already shown, skipping`)
+          return
+        }
+
         // Check if message already exists in database
         const exists = await hasMessage(message.id)
         if (!exists) {

@@ -159,11 +159,20 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
 export const closeNoticeWindow = async (messageId: string): Promise<void> => {
   const normalizedId = String(messageId)
   const window = activeWindows.get(normalizedId)
+  const store = useMessageQueueStore.getState()
 
   if (window) {
     try {
       await window.close()
       activeWindows.delete(normalizedId)
+      store.removeActiveWindow(normalizedId)
+      
+      // Mark as shown to prevent it from appearing again
+      await markAsShown(normalizedId)
+      
+      // Clear current message and advance queue
+      store.clearCurrent()
+      
       console.log(`Closed notice window: ${normalizedId}`)
     } catch (error) {
       console.error('Failed to close notice window:', error)

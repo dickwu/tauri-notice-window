@@ -66,6 +66,16 @@ export const hasMessage = async (id: string): Promise<boolean> => {
 }
 
 /**
+ * Check if a message was already shown
+ * @param id - Message ID to check
+ * @returns True if message was already shown (and should not be shown again)
+ */
+export const isMessageShown = async (id: string): Promise<boolean> => {
+  const message = await getDb().messages.get(id)
+  return message?.isShown === true || message?.queueStatus === 'shown'
+}
+
+/**
  * Get all pending messages sorted by queue position
  * @returns Array of pending messages
  */

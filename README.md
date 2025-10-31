@@ -22,6 +22,86 @@ yarn add tauri-notice-window
 pnpm add tauri-notice-window
 ```
 
+## Tauri Permissions Setup
+
+**IMPORTANT**: Before using this library, you must configure Tauri permissions for notice windows.
+
+Create a capability file in your Tauri project at `src-tauri/capabilities/notice.json`:
+
+```json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "notice",
+  "description": "Capability for notice windows",
+  "windows": ["notice-*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-center",
+    "core:webview:allow-webview-close"
+  ]
+}
+```
+
+> **Note**: The `"windows": ["notice-*"]` pattern matches all notice windows created by this library based on the message ID (e.g., `notice-123`, `notice-456`).
+
+If your notice windows need to make HTTP requests or access other Tauri plugins, add those permissions as well:
+
+```json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "notice",
+  "description": "Capability for notice windows with HTTP access",
+  "windows": ["notice-*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-center",
+    "core:webview:allow-webview-close",
+    "http:allow-fetch",
+    "http:allow-fetch-send",
+    "http:allow-fetch-cancel",
+    "http:allow-fetch-read-body",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://your-api-domain.com"
+        }
+      ]
+    }
+  ]
+}
+```
+
+For store/database access in notice windows:
+
+```json
+{
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-center",
+    "core:webview:allow-webview-close",
+    "store:allow-get",
+    "store:allow-save",
+    "store:allow-delete",
+    "store:allow-reload",
+    "store:allow-load"
+  ]
+}
+```
+
+
 ## Quick Start
 
 ### 1. Initialize the System
@@ -411,6 +491,7 @@ Messages are persisted to IndexedDB via Dexie. On app restart:
 - Tauri v2.0+
 - React 19+
 - Modern browsers with IndexedDB support
+- **Tauri window permissions configured** (see [Tauri Permissions Setup](#tauri-permissions-setup))
 
 ## License
 
