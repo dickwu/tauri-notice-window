@@ -1,0 +1,32 @@
+{
+  "$schema": "https://context7.dev/schema.json",
+  "libraries": [
+    {
+      "id": "tauri-apps/tauri",
+      "version": "v2",
+      "description": "Tauri v2 API for building desktop applications"
+    },
+    {
+      "id": "pmndrs/zustand",
+      "description": "State management library used for cross-window state synchronization"
+    },
+    {
+      "id": "dexie/Dexie.js",
+      "description": "IndexedDB wrapper for persistent message queue storage"
+    },
+    {
+      "id": "facebook/react",
+      "version": "v19",
+      "description": "React library for building UI components"
+    },
+    {
+      "id": "vitejs/vite",
+      "description": "Build tool and development server"
+    },
+    {
+      "id": "microsoft/TypeScript",
+      "description": "TypeScript language for type-safe development"
+    }
+  ]
+}
+
