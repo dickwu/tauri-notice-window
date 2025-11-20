@@ -712,6 +712,50 @@ setNoticeConfig({
 
 **URL Validation:** Before creating a WebviewWindow, the library validates the window URL. If the URL is invalid (empty, malformed, or doesn't start with `/`, `http://`, `https://`, or `tauri://`), it automatically falls back to the `notFoundUrl` and logs a warning.
 
+#### deleteMessageById()
+
+Delete a message by ID. Removes the message from both the runtime queue (Zustand) and persistent storage (IndexedDB).
+
+```typescript
+import { deleteMessageById } from 'tauri-notice-window'
+
+await deleteMessageById('message-123')
+```
+
+**Behavior:**
+- Removes message from queue and database
+- If message is currently displayed, window closes automatically
+- Next message in queue shows immediately
+
+#### hideMessageById()
+
+Hide a message by ID. Marks the message as hidden in the database and removes it from the queue.
+
+```typescript
+import { hideMessageById } from 'tauri-notice-window'
+
+// Typically used for server-triggered hide events
+await hideMessageById('message-123')
+```
+
+**Behavior:**
+- Marks message as hidden in database
+- Removes from queue
+- Closes window if currently displayed
+
+#### markMessageAsShown()
+
+Mark a message as shown to prevent it from being displayed again.
+
+```typescript
+import { markMessageAsShown } from 'tauri-notice-window'
+
+// Manually mark without displaying
+await markMessageAsShown('message-123')
+```
+
+**Use Case:** When you need to acknowledge a message without showing its window (e.g., user already saw it elsewhere).
+
 ### Store Methods (Recommended)
 
 All operations should go through the Zustand store for consistency:
@@ -822,14 +866,18 @@ app/
 
 ### Message Deletion and Queue Management
 
-All message operations should go through the Zustand store to maintain consistency.
+All message operations go through clean public APIs that internally use the Zustand store.
 
 ```typescript
-import { useNoticeWindow, useMessageQueueStore } from 'tauri-notice-window'
+import { 
+  useNoticeWindow, 
+  deleteMessageById, 
+  hideMessageById,
+  markMessageAsShown 
+} from 'tauri-notice-window'
 
 function NoticeManager() {
   const { showNotice } = useNoticeWindow()
-  const store = useMessageQueueStore.getState()
 
   // Example 1: Delete a message from the queue
   const handleDeleteMessage = async () => {
@@ -837,8 +885,8 @@ function NoticeManager() {
     await showNotice({ id: '2', title: 'Second', type: 'announcement', data: {} })
     await showNotice({ id: '3', title: 'Third', type: 'announcement', data: {} })
 
-    // Delete message '2' from queue via store
-    await store.deleteMessage('2')
+    // Delete message '2' from queue
+    await deleteMessageById('2')
     // Result: Message removed from queue and database
     // Console output: "Message 2 was deleted, skipping to next"
   }
@@ -848,42 +896,50 @@ function NoticeManager() {
     await showNotice({ id: '4', title: 'Current', type: 'announcement', data: {} })
     // Window for message '4' is now open
 
-    // Delete via store
-    await store.deleteMessage('4')
+    // Delete current message
+    await deleteMessageById('4')
     // Result: Window closes, next message shows automatically
   }
 
-  // Example 3: Remove from queue without deleting from DB
-  const handleRemoveFromQueue = async () => {
-    await store.removeFromQueue('5')  // Only removes from runtime queue
-    // Message still exists in DB for historical queries
+  // Example 3: Hide a message (server-triggered)
+  const handleHideMessage = async (messageId: string) => {
+    await hideMessageById(messageId)
+    // Marks as hidden in DB + removes from queue + closes window
   }
 
-  // Example 4: Hide a message (server-triggered)
-  const handleHideMessage = async () => {
-    await store.hideMessage('6')  // Marks as hidden + removes from queue
+  // Example 4: Mark as shown without displaying
+  const handleMarkAsShown = async (messageId: string) => {
+    await markMessageAsShown(messageId)
+    // Prevents message from being shown in the future
   }
 }
 ```
 
 **How it works:**
-1. **Store methods** handle both memory (Zustand) and persistence (IndexedDB)
-2. `deleteMessage()` removes from both queue and database
+1. All operations update both the store (Zustand) and database (IndexedDB)
+2. `deleteMessageById()` removes from both queue and database
 3. If deleted message is currently shown, window closes automatically
 4. Queue position changes are persisted to database
 5. Before showing any message, system verifies it exists in database
 6. **Safety Layer:** `NoticeLayout` component auto-closes if message is missing
 
-**Key Difference from Old API:**
+**API Methods:**
 ```typescript
-// ❌ OLD: Direct database access (bypassed store, caused circular deps)
-import { deleteMessageById } from 'tauri-notice-window'
-await deleteMessageById('123')  // Only deleted from DB, not from queue
+// Delete message completely
+await deleteMessageById('123')
+// → Removes from queue AND database
+// → If currently showing, window closes
 
-// ✅ NEW: Store-first approach (clean, consistent)
-import { useMessageQueueStore } from 'tauri-notice-window'
-const store = useMessageQueueStore.getState()
-await store.deleteMessage('123')  // Updates both store and database
+// Hide message (server-triggered)
+await hideMessageById('123')
+// → Marks as hidden in database
+// → Removes from queue
+// → Closes window if open
+
+// Mark as shown
+await markMessageAsShown('123')
+// → Updates database
+// → Prevents future display
 ```
 
 ### Server-Triggered Hide
