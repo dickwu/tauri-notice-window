@@ -39,29 +39,13 @@ export {
 
 import { 
   initializeDatabase,
-  saveMessage,
-  hasMessage,
-  isMessageShown,
   getPendingMessages,
   getMessage,
-  deleteMessageById,
-  markAsShown,
-  markAsHidden,
-  clearPendingMessages,
-  updateQueueStatus,
 } from './utils/db'
 export { 
   initializeDatabase,
-  saveMessage,
-  hasMessage,
-  isMessageShown,
   getPendingMessages,
   getMessage,
-  deleteMessageById,
-  updateQueueStatus,
-  markAsShown,
-  markAsHidden,
-  clearPendingMessages,
 }
 
 /**

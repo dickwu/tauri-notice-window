@@ -5,7 +5,9 @@ A reusable React library for cross-window notification management in Tauri v2+ a
 ## Features
 
 - **Cross-Window State Sync**: All Tauri windows (main + notice windows) see the same state via `zustand-sync`
-- **Persistent Queue**: Messages survive app restarts with IndexedDB (Dexie)
+- **Zustand-First Architecture**: Zustand store is the single source of truth at runtime
+- **Persistent Queue**: IndexedDB (Dexie) used only for cold storage (app restarts)
+- **Clean Data Flow**: Store → Database (one-way dependency, no circular dependencies)
 - **One-at-a-Time Display**: Only one notice window shown at a time
 - **Customizable Routes**: Configurable router prefix for notice pages
 - **URL Validation & 404 Fallback**: Automatic validation with customizable error pages for invalid routes
@@ -710,23 +712,60 @@ setNoticeConfig({
 
 **URL Validation:** Before creating a WebviewWindow, the library validates the window URL. If the URL is invalid (empty, malformed, or doesn't start with `/`, `http://`, `https://`, or `tauri://`), it automatically falls back to the `notFoundUrl` and logs a warning.
 
-### Database Utilities
+### Store Methods (Recommended)
 
-For advanced use cases, direct database access is available:
+All operations should go through the Zustand store for consistency:
 
-#### saveMessage()
+#### store.deleteMessage()
 
-Save a message to the database.
+Delete a message completely (from both memory and database).
 
 ```typescript
-import { saveMessage } from 'tauri-notice-window'
+import { useMessageQueueStore } from 'tauri-notice-window'
 
-await saveMessage({
-  id: '123',
-  title: 'Notice',
-  type: 'announcement',
-  data: { content: 'Message content' }
-})
+const store = useMessageQueueStore.getState()
+await store.deleteMessage('123')  // Removes from store AND database
+```
+
+#### store.hideMessage()
+
+Hide a message (marks as hidden and removes from queue).
+
+```typescript
+const store = useMessageQueueStore.getState()
+await store.hideMessage('123')  // Marks hidden in DB, removes from queue
+```
+
+#### store.removeFromQueue()
+
+Remove a message from queue (memory only, persists position changes).
+
+```typescript
+const store = useMessageQueueStore.getState()
+await store.removeFromQueue('123')  // Updates queue positions in DB
+```
+
+#### store.markMessageAsShown()
+
+Mark a message as shown in database.
+
+```typescript
+const store = useMessageQueueStore.getState()
+await store.markMessageAsShown('123')  // Prevents re-showing
+```
+
+### Database Utilities (Low-Level)
+
+⚠️ **Warning:** Direct database access bypasses the store. Only use these for advanced scenarios where you need to query historical data. For all mutations, use store methods above.
+
+#### initializeDatabase()
+
+Initialize the database (called automatically by `initializeNoticeSystem()`).
+
+```typescript
+import { initializeDatabase } from 'tauri-notice-window'
+
+const db = initializeDatabase()
 ```
 
 #### getMessage()
@@ -739,37 +778,7 @@ import { getMessage } from 'tauri-notice-window'
 const message = await getMessage('123')
 ```
 
-#### deleteMessageById()
 
-Delete a message by ID. This will remove the message from both the database and the queue, preventing it from being displayed.
-
-```typescript
-import { deleteMessageById } from 'tauri-notice-window'
-
-await deleteMessageById('123')
-```
-
-**Note:** When a message is deleted, it is automatically removed from the zustand queue. If the deleted message was the current message being displayed, the window will be closed and the next message will be shown automatically.
-
-#### hasMessage()
-
-Check if a message exists in the database.
-
-```typescript
-import { hasMessage } from 'tauri-notice-window'
-
-const exists = await hasMessage('123')
-```
-
-#### isMessageShown()
-
-Check if a message was already shown.
-
-```typescript
-import { isMessageShown } from 'tauri-notice-window'
-
-const shown = await isMessageShown('123')
-```
 
 #### getPendingMessages()
 
@@ -781,45 +790,6 @@ import { getPendingMessages } from 'tauri-notice-window'
 const pending = await getPendingMessages()
 ```
 
-#### updateQueueStatus()
-
-Update the queue status of a message.
-
-```typescript
-import { updateQueueStatus } from 'tauri-notice-window'
-
-await updateQueueStatus('123', 'shown')
-```
-
-#### markAsShown()
-
-Mark a message as shown.
-
-```typescript
-import { markAsShown } from 'tauri-notice-window'
-
-await markAsShown('123')
-```
-
-#### markAsHidden()
-
-Mark a message as hidden.
-
-```typescript
-import { markAsHidden } from 'tauri-notice-window'
-
-await markAsHidden('123')
-```
-
-#### clearPendingMessages()
-
-Clear all pending and showing messages.
-
-```typescript
-import { clearPendingMessages } from 'tauri-notice-window'
-
-await clearPendingMessages()
-```
 
 ## Routing Setup
 
@@ -850,43 +820,71 @@ app/
 
 ## Advanced Usage
 
-### Message Queue Validation
+### Message Deletion and Queue Management
 
-The library automatically validates messages in the queue before displaying them. If a message has been deleted from the database, it will be skipped and the next message will be shown instead.
+All message operations should go through the Zustand store to maintain consistency.
 
 ```typescript
-import { showNotice, deleteMessageById } from 'tauri-notice-window'
+import { useNoticeWindow, useMessageQueueStore } from 'tauri-notice-window'
 
-// Example 1: Delete a message in the queue
-await showNotice({ id: '1', title: 'First', type: 'announcement', data: {} })
-await showNotice({ id: '2', title: 'Second', type: 'announcement', data: {} })
-await showNotice({ id: '3', title: 'Third', type: 'announcement', data: {} })
+function NoticeManager() {
+  const { showNotice } = useNoticeWindow()
+  const store = useMessageQueueStore.getState()
 
-// If message '2' is deleted while in queue
-await deleteMessageById('2')
+  // Example 1: Delete a message from the queue
+  const handleDeleteMessage = async () => {
+    await showNotice({ id: '1', title: 'First', type: 'announcement', data: {} })
+    await showNotice({ id: '2', title: 'Second', type: 'announcement', data: {} })
+    await showNotice({ id: '3', title: 'Third', type: 'announcement', data: {} })
 
-// The queue will automatically skip message '2' and show message '3' next
-// Console output: "Message 2 was deleted, skipping to next"
+    // Delete message '2' from queue via store
+    await store.deleteMessage('2')
+    // Result: Message removed from queue and database
+    // Console output: "Message 2 was deleted, skipping to next"
+  }
 
-// Example 2: Delete the currently displayed message
-await showNotice({ id: '4', title: 'Current', type: 'announcement', data: {} })
-// Window for message '4' is now open and displayed
+  // Example 2: Delete the currently displayed message
+  const handleDeleteCurrent = async () => {
+    await showNotice({ id: '4', title: 'Current', type: 'announcement', data: {} })
+    // Window for message '4' is now open
 
-// Delete the currently open message
-await deleteMessageById('4')
-// Result: The window for message '4' is automatically closed
-//         The next message in the queue (if any) is shown immediately
+    // Delete via store
+    await store.deleteMessage('4')
+    // Result: Window closes, next message shows automatically
+  }
+
+  // Example 3: Remove from queue without deleting from DB
+  const handleRemoveFromQueue = async () => {
+    await store.removeFromQueue('5')  // Only removes from runtime queue
+    // Message still exists in DB for historical queries
+  }
+
+  // Example 4: Hide a message (server-triggered)
+  const handleHideMessage = async () => {
+    await store.hideMessage('6')  // Marks as hidden + removes from queue
+  }
+}
 ```
 
 **How it works:**
-1. When `deleteMessageById()` is called, the message is removed from both the database and the zustand queue
-2. If the deleted message has an open window, the window is automatically closed
-3. Before showing any message, the system verifies it still exists in the database
-4. If a message was deleted, it's automatically skipped and the next message is shown
-5. The next message in the queue is displayed automatically after closing the deleted message's window
-6. **Safety Layer:** If a window somehow opens for a deleted message, the `NoticeLayout` component detects this and automatically closes the window
+1. **Store methods** handle both memory (Zustand) and persistence (IndexedDB)
+2. `deleteMessage()` removes from both queue and database
+3. If deleted message is currently shown, window closes automatically
+4. Queue position changes are persisted to database
+5. Before showing any message, system verifies it exists in database
+6. **Safety Layer:** `NoticeLayout` component auto-closes if message is missing
 
-This ensures that windows are never opened for deleted messages, and any open window for a deleted message is immediately closed.
+**Key Difference from Old API:**
+```typescript
+// ❌ OLD: Direct database access (bypassed store, caused circular deps)
+import { deleteMessageById } from 'tauri-notice-window'
+await deleteMessageById('123')  // Only deleted from DB, not from queue
+
+// ✅ NEW: Store-first approach (clean, consistent)
+import { useMessageQueueStore } from 'tauri-notice-window'
+const store = useMessageQueueStore.getState()
+await store.deleteMessage('123')  // Updates both store and database
+```
 
 ### Server-Triggered Hide
 
@@ -1008,6 +1006,45 @@ function QueueIndicator() {
 
 ## How It Works
 
+### Architecture: Zustand-First Design
+
+This library follows a **clean, one-way data flow** architecture:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Runtime (While App is Running)                     │
+│                                                     │
+│  ┌──────────────────────────────────────┐           │
+│  │   Zustand Store (Source of Truth)    │           │
+│  │  - Queue state                       │           │
+│  │  - Current message                   │           │
+│  │  - Processing status                 │           │
+│  └──────────────┬───────────────────────┘           │
+│                 │                                   │
+│                 │ Persists to ↓                     │
+│                 │                                   │
+│  ┌──────────────▼───────────────────────┐           │
+│  │   IndexedDB (Dexie)                  │           │
+│  │  - Dumb storage layer                │           │
+│  │  - No business logic                 │           │
+│  │  - Only for cold starts              │           │
+│  └──────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  Cold Start (App Restart)                           │
+│                                                     │
+│  IndexedDB ────loads───► Zustand Store              │
+│                          (Back to runtime mode)     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key Principles:**
+1. **Zustand is the boss** - All operations go through the store
+2. **Database is dumb** - Pure storage functions, no knowledge of store
+3. **One-way flow** - Store writes to DB, DB never touches store
+4. **No circular dependencies** - Clean module boundaries
+
 ### Cross-Window Synchronization
 
 The library uses `zustand-sync` to synchronize state across all Tauri windows via localStorage. When you enqueue a message in the main window, all notice windows see the update in real-time.
@@ -1022,6 +1059,9 @@ Zustand Store ◄─────────► localStorage ◄─────�
      |                            |                      |
      ▼                            ▼                      ▼
 State Updated              State Updated          State Updated
+     │                                                   │
+     └─────── Persists to IndexedDB ────────────────────┘
+                   (for cold starts only)
 ```
 
 ### Message Lifecycle
@@ -1031,12 +1071,24 @@ State Updated              State Updated          State Updated
 3. **shown**: User has acknowledged the message
 4. **hidden**: Server requested to hide the message
 
-### Persistence
+### Persistence Strategy
 
-Messages are persisted to IndexedDB via Dexie. On app restart:
+**At Runtime:**
+- All state lives in Zustand store (in-memory)
+- Store automatically persists changes to IndexedDB
+- Database is just a backup, not actively queried
+
+**On App Restart:**
 1. Database is initialized
-2. Pending messages are loaded
+2. Pending messages are loaded into Zustand store
 3. First message is shown automatically
+4. Back to runtime mode (Zustand is now the truth)
+
+**Why This Design?**
+- **Performance**: No database queries during normal operation
+- **Simplicity**: Single source of truth eliminates sync bugs
+- **Clean Code**: No circular dependencies, predictable data flow
+- **Reliability**: Database only used for cold storage
 
 ## Requirements
 

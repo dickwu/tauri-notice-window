@@ -10,6 +10,9 @@ import {
   hasMessage,
   isMessageShown,
   getMessage,
+  markAsShown,
+  markAsHidden,
+  deleteMessageById,
 } from '../utils/db'
 
 /**
@@ -34,7 +37,10 @@ interface MessageQueueState {
   initializeFromDatabase: () => Promise<void>
   persistQueue: () => Promise<void>
   clearOnLogout: () => Promise<void>
-  removeFromQueue: (messageId: string) => void
+  removeFromQueue: (messageId: string) => Promise<void>
+  deleteMessage: (messageId: string) => Promise<void>
+  hideMessage: (messageId: string) => Promise<void>
+  markMessageAsShown: (messageId: string) => Promise<void>
   addActiveWindow: (id: string) => void
   removeActiveWindow: (id: string) => void
   isWindowActive: (id: string) => boolean
@@ -196,27 +202,42 @@ const storeCreator: StateCreator<MessageQueueState> = (set, get) => ({
         await clearPendingMessages()
       },
 
-      // Remove a specific message from the queue by ID
-      removeFromQueue: (messageId: string) => {
+      // Remove a specific message from the queue by ID (memory only)
+      removeFromQueue: async (messageId: string) => {
         const state = get()
         const newQueue = state.queue.filter((msg: MessageType) => msg.id !== messageId)
         set({ queue: newQueue })
         
-        // If we removed the current message, close its window and show next
+        // Persist queue changes
+        await get().persistQueue()
+        
+        // If we removed the current message, clear it to trigger next
         if (state.currentMessage?.id === messageId) {
-          // Close the window if it's currently open
-          const closeWindow = async () => {
-            try {
-              const { closeNoticeWindow } = await import('../utils/noticeWindow')
-              await closeNoticeWindow(messageId)
-            } catch (error) {
-              console.warn('Failed to close notice window:', error)
-              // Even if close fails, still clear current and show next
-              get().clearCurrent()
-            }
-          }
-          closeWindow()
+          get().clearCurrent()
         }
+      },
+
+      // Delete message completely (from both memory and database)
+      deleteMessage: async (messageId: string) => {
+        // Remove from database
+        await deleteMessageById(messageId)
+        
+        // Remove from memory
+        await get().removeFromQueue(messageId)
+      },
+
+      // Hide a message (mark as hidden and remove from queue)
+      hideMessage: async (messageId: string) => {
+        // Mark as hidden in database
+        await markAsHidden(messageId)
+        
+        // Remove from queue
+        await get().removeFromQueue(messageId)
+      },
+
+      // Mark message as shown in database
+      markMessageAsShown: async (messageId: string) => {
+        await markAsShown(messageId)
       },
 
       // Add active window ID

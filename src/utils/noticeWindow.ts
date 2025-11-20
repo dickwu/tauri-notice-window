@@ -2,7 +2,6 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { primaryMonitor } from '@tauri-apps/api/window'
 import type { MessageType, WindowPosition } from '../types/message'
 import { useMessageQueueStore } from '../stores/messageQueueStore'
-import { markAsShown } from './db'
 import { getNoticeConfig } from '../config/noticeConfig'
 
 /**
@@ -162,8 +161,8 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
       activeWindows.delete(normalizedId)
       store.removeActiveWindow(normalizedId)
 
-      // Mark as shown in database
-      await markAsShown(normalizedId)
+      // Mark as shown in database via store
+      await store.markMessageAsShown(normalizedId)
 
       // Show next message
       store.clearCurrent()
@@ -194,7 +193,7 @@ export const closeNoticeWindow = async (messageId: string): Promise<void> => {
       store.removeActiveWindow(normalizedId)
       
       // Mark as shown to prevent it from appearing again
-      await markAsShown(normalizedId)
+      await store.markMessageAsShown(normalizedId)
       
       // Clear current message and advance queue
       store.clearCurrent()
