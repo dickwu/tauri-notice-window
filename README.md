@@ -307,6 +307,115 @@ setNoticeConfig({
 })
 ```
 
+### Database Utilities
+
+For advanced use cases, direct database access is available:
+
+#### saveMessage()
+
+Save a message to the database.
+
+```typescript
+import { saveMessage } from 'tauri-notice-window'
+
+await saveMessage({
+  id: '123',
+  title: 'Notice',
+  type: 'announcement',
+  data: { content: 'Message content' }
+})
+```
+
+#### getMessage()
+
+Retrieve a message by ID.
+
+```typescript
+import { getMessage } from 'tauri-notice-window'
+
+const message = await getMessage('123')
+```
+
+#### deleteMessageById()
+
+Delete a message by ID.
+
+```typescript
+import { deleteMessageById } from 'tauri-notice-window'
+
+await deleteMessageById('123')
+```
+
+#### hasMessage()
+
+Check if a message exists in the database.
+
+```typescript
+import { hasMessage } from 'tauri-notice-window'
+
+const exists = await hasMessage('123')
+```
+
+#### isMessageShown()
+
+Check if a message was already shown.
+
+```typescript
+import { isMessageShown } from 'tauri-notice-window'
+
+const shown = await isMessageShown('123')
+```
+
+#### getPendingMessages()
+
+Get all pending messages.
+
+```typescript
+import { getPendingMessages } from 'tauri-notice-window'
+
+const pending = await getPendingMessages()
+```
+
+#### updateQueueStatus()
+
+Update the queue status of a message.
+
+```typescript
+import { updateQueueStatus } from 'tauri-notice-window'
+
+await updateQueueStatus('123', 'shown')
+```
+
+#### markAsShown()
+
+Mark a message as shown.
+
+```typescript
+import { markAsShown } from 'tauri-notice-window'
+
+await markAsShown('123')
+```
+
+#### markAsHidden()
+
+Mark a message as hidden.
+
+```typescript
+import { markAsHidden } from 'tauri-notice-window'
+
+await markAsHidden('123')
+```
+
+#### clearPendingMessages()
+
+Clear all pending and showing messages.
+
+```typescript
+import { clearPendingMessages } from 'tauri-notice-window'
+
+await clearPendingMessages()
+```
+
 ## Routing Setup
 
 The library expects routes to match the pattern: `{routePrefix}/{message.type}`

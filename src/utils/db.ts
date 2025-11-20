@@ -129,6 +129,14 @@ export const getMessage = async (id: string): Promise<StoredMessage | undefined>
 }
 
 /**
+ * Delete a message by ID
+ * @param id - Message ID to delete
+ */
+export const deleteMessageById = async (id: string): Promise<void> => {
+  await getDb().messages.delete(id)
+}
+
+/**
  * Clear all pending and showing messages
  */
 export const clearPendingMessages = async (): Promise<void> => {
