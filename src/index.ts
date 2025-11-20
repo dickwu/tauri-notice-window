@@ -48,6 +48,7 @@ import {
   markAsShown,
   markAsHidden,
   clearPendingMessages,
+  updateQueueStatus,
 } from './utils/db'
 export { 
   initializeDatabase,
@@ -57,6 +58,7 @@ export {
   getPendingMessages,
   getMessage,
   deleteMessageById,
+  updateQueueStatus,
   markAsShown,
   markAsHidden,
   clearPendingMessages,

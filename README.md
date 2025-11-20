@@ -741,13 +741,15 @@ const message = await getMessage('123')
 
 #### deleteMessageById()
 
-Delete a message by ID.
+Delete a message by ID. This will remove the message from both the database and the queue, preventing it from being displayed.
 
 ```typescript
 import { deleteMessageById } from 'tauri-notice-window'
 
 await deleteMessageById('123')
 ```
+
+**Note:** When a message is deleted, it is automatically removed from the zustand queue. If the deleted message was the current message being displayed, the window will be closed and the next message will be shown automatically.
 
 #### hasMessage()
 
@@ -847,6 +849,44 @@ app/
 ```
 
 ## Advanced Usage
+
+### Message Queue Validation
+
+The library automatically validates messages in the queue before displaying them. If a message has been deleted from the database, it will be skipped and the next message will be shown instead.
+
+```typescript
+import { showNotice, deleteMessageById } from 'tauri-notice-window'
+
+// Example 1: Delete a message in the queue
+await showNotice({ id: '1', title: 'First', type: 'announcement', data: {} })
+await showNotice({ id: '2', title: 'Second', type: 'announcement', data: {} })
+await showNotice({ id: '3', title: 'Third', type: 'announcement', data: {} })
+
+// If message '2' is deleted while in queue
+await deleteMessageById('2')
+
+// The queue will automatically skip message '2' and show message '3' next
+// Console output: "Message 2 was deleted, skipping to next"
+
+// Example 2: Delete the currently displayed message
+await showNotice({ id: '4', title: 'Current', type: 'announcement', data: {} })
+// Window for message '4' is now open and displayed
+
+// Delete the currently open message
+await deleteMessageById('4')
+// Result: The window for message '4' is automatically closed
+//         The next message in the queue (if any) is shown immediately
+```
+
+**How it works:**
+1. When `deleteMessageById()` is called, the message is removed from both the database and the zustand queue
+2. If the deleted message has an open window, the window is automatically closed
+3. Before showing any message, the system verifies it still exists in the database
+4. If a message was deleted, it's automatically skipped and the next message is shown
+5. The next message in the queue is displayed automatically after closing the deleted message's window
+6. **Safety Layer:** If a window somehow opens for a deleted message, the `NoticeLayout` component detects this and automatically closes the window
+
+This ensures that windows are never opened for deleted messages, and any open window for a deleted message is immediately closed.
 
 ### Server-Triggered Hide
 

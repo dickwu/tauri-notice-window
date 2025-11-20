@@ -9,6 +9,7 @@ import {
   updateQueuePositions,
   hasMessage,
   isMessageShown,
+  getMessage,
 } from '../utils/db'
 
 /**
@@ -33,6 +34,7 @@ interface MessageQueueState {
   initializeFromDatabase: () => Promise<void>
   persistQueue: () => Promise<void>
   clearOnLogout: () => Promise<void>
+  removeFromQueue: (messageId: string) => void
   addActiveWindow: (id: string) => void
   removeActiveWindow: (id: string) => void
   isWindowActive: (id: string) => boolean
@@ -100,6 +102,15 @@ const storeCreator: StateCreator<MessageQueueState> = (set, get) => ({
         const nextMessage = get().dequeue()
         if (!nextMessage) {
           set({ isProcessing: false, currentMessage: null })
+          return
+        }
+
+        // Verify message still exists in database before showing
+        const messageExists = await getMessage(nextMessage.id)
+        if (!messageExists) {
+          console.log(`Message ${nextMessage.id} was deleted, skipping to next`)
+          // Message was deleted, recursively try next message
+          await get().showNext()
           return
         }
 
@@ -183,6 +194,29 @@ const storeCreator: StateCreator<MessageQueueState> = (set, get) => ({
           initialized: false,
         })
         await clearPendingMessages()
+      },
+
+      // Remove a specific message from the queue by ID
+      removeFromQueue: (messageId: string) => {
+        const state = get()
+        const newQueue = state.queue.filter((msg: MessageType) => msg.id !== messageId)
+        set({ queue: newQueue })
+        
+        // If we removed the current message, close its window and show next
+        if (state.currentMessage?.id === messageId) {
+          // Close the window if it's currently open
+          const closeWindow = async () => {
+            try {
+              const { closeNoticeWindow } = await import('../utils/noticeWindow')
+              await closeNoticeWindow(messageId)
+            } catch (error) {
+              console.warn('Failed to close notice window:', error)
+              // Even if close fails, still clear current and show next
+              get().clearCurrent()
+            }
+          }
+          closeWindow()
+        }
       },
 
       // Add active window ID

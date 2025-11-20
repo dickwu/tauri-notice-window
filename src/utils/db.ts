@@ -134,6 +134,15 @@ export const getMessage = async (id: string): Promise<StoredMessage | undefined>
  */
 export const deleteMessageById = async (id: string): Promise<void> => {
   await getDb().messages.delete(id)
+  
+  // Also remove from zustand queue if store is available
+  try {
+    const { useMessageQueueStore } = await import('../stores/messageQueueStore')
+    const { removeFromQueue } = useMessageQueueStore.getState()
+    removeFromQueue(id)
+  } catch (error) {
+    console.warn('Failed to remove message from queue store:', error)
+  }
 }
 
 /**

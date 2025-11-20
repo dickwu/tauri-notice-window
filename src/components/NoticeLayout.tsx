@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { MessageType } from '../types/message'
 import { getMessage } from '../utils/db'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 /**
  * Props for NoticeLayout component
@@ -39,6 +40,15 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
         if (!messageId) {
           setError('No message ID provided')
           setLoading(false)
+          // Close window after a brief delay to show error
+          setTimeout(async () => {
+            try {
+              const window = getCurrentWebviewWindow()
+              await window.close()
+            } catch (error) {
+              console.error('Failed to close window:', error)
+            }
+          }, 1000)
           return
         }
 
@@ -46,8 +56,18 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
         const storedMessage = await getMessage(messageId)
 
         if (!storedMessage) {
+          console.log(`Message ${messageId} not found in database, closing window`)
           setError('Message not found')
           setLoading(false)
+          // Close window immediately if message doesn't exist
+          setTimeout(async () => {
+            try {
+              const window = getCurrentWebviewWindow()
+              await window.close()
+            } catch (error) {
+              console.error('Failed to close window:', error)
+            }
+          }, 500)
           return
         }
 
@@ -62,6 +82,15 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
         console.error('Failed to load message:', err)
         setError('Failed to load message')
         setLoading(false)
+        // Close window on error
+        setTimeout(async () => {
+          try {
+            const window = getCurrentWebviewWindow()
+            await window.close()
+          } catch (error) {
+            console.error('Failed to close window:', error)
+          }
+        }, 1000)
       }
     }
 
@@ -97,7 +126,7 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
     )
   }
 
-  if (error || !message) {
+  if (error) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -107,7 +136,22 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
         fontFamily: 'system-ui, -apple-system, sans-serif',
         color: '#ef4444'
       }}>
-        {error || 'Message not found'}
+        {error}
+      </div>
+    )
+  }
+
+  if (!message) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        color: '#ef4444'
+      }}>
+        Closing window...
       </div>
     )
   }
