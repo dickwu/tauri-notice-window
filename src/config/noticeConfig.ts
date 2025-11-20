@@ -10,6 +10,7 @@ const defaultConfig: NoticeConfig = {
   databaseName: 'tauri-notice-db',
   defaultWidth: 400,
   defaultHeight: 300,
+  notFoundUrl: '/404', // Default 404 page
 }
 
 /**

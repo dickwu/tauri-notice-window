@@ -34,6 +34,7 @@ export default function RootLayout({ children }) {
       databaseName: 'my-app-notices',
       defaultWidth: 450,
       defaultHeight: 350,
+      notFoundUrl: '/notice/404', // Custom 404 page
     })
 
     // Initialize

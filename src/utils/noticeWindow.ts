@@ -11,6 +11,26 @@ import { getNoticeConfig } from '../config/noticeConfig'
 const activeWindows = new Map<string, WebviewWindow>()
 
 /**
+ * Validate if a URL is usable for WebviewWindow
+ * @param url - URL to validate
+ * @returns true if URL appears valid
+ */
+const isValidWindowUrl = (url: string): boolean => {
+  if (!url || url.trim() === '') return false
+  
+  // Check for basic URL structure
+  try {
+    // Allow relative URLs (starting with /) and absolute URLs
+    if (url.startsWith('/')) return true
+    if (url.startsWith('http://') || url.startsWith('https://')) return true
+    if (url.startsWith('tauri://')) return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+/**
  * Calculate window position based on position preset or custom coordinates
  * @param width - Window width
  * @param height - Window height
@@ -102,7 +122,13 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
 
   const config = getNoticeConfig()
   const windowLabel = `notice-${normalizedId}`
-  const windowUrl = `${config.routePrefix}/${message.type}?id=${message.id}`
+  let windowUrl = `${config.routePrefix}/${message.type}?id=${message.id}`
+  
+  // Validate URL and fallback to 404 if invalid
+  if (!isValidWindowUrl(windowUrl)) {
+    console.warn(`Invalid window URL: ${windowUrl}. Using fallback 404 page.`)
+    windowUrl = config.notFoundUrl || '/404'
+  }
 
   // Determine window dimensions
   const width = message.min_width || config.defaultWidth

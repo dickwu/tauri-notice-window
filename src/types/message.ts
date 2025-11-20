@@ -60,5 +60,7 @@ export interface NoticeConfig {
   defaultWidth: number
   /** Default window height if not specified in message */
   defaultHeight: number
+  /** Custom 404 page URL when windowUrl is invalid (optional) */
+  notFoundUrl?: string
 }
 

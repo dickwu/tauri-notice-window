@@ -8,6 +8,7 @@ A reusable React library for cross-window notification management in Tauri v2+ a
 - **Persistent Queue**: Messages survive app restarts with IndexedDB (Dexie)
 - **One-at-a-Time Display**: Only one notice window shown at a time
 - **Customizable Routes**: Configurable router prefix for notice pages
+- **URL Validation & 404 Fallback**: Automatic validation with customizable error pages for invalid routes
 - **Type Safety**: Full TypeScript support
 - **Easy Integration**: Simple hooks API
 - **Tauri v2 Ready**: Uses latest Tauri v2 window APIs
@@ -120,6 +121,7 @@ function App() {
       databaseName: 'tauri-notice-db',  // default
       defaultWidth: 400, // default width of the notice window
       defaultHeight: 300, // default height of the notice window
+      notFoundUrl: '/404', // custom 404 page when route is invalid (optional)
     })
 
     // Initialize the system
@@ -177,6 +179,403 @@ export default function AnnouncementNotice() {
 }
 ```
 
+### 4. Create a 404 Error Page (Optional)
+
+If a notice window URL is invalid, the library will automatically show a 404 page. Create a custom 404 component:
+
+```typescript
+// app/404/page.tsx or notice/404/page.tsx
+import { useCloseNotice } from 'tauri-notice-window'
+
+export default function NotFound() {
+  const { closeNotice } = useCloseNotice()
+
+  return (
+    <div className="error-container">
+      <h1>404 - Page Not Found</h1>
+      <p>The requested notice page could not be found.</p>
+      <button onClick={closeNotice}>Close</button>
+    </div>
+  )
+}
+```
+
+Then configure the 404 URL during initialization:
+
+```typescript
+setNoticeConfig({
+  routePrefix: '/notice',
+  notFoundUrl: '/notice/404', // or '/404' depending on your routing setup
+})
+```
+
+**How it works:**
+- Before creating a WebviewWindow, the library validates the URL
+- Invalid URLs (empty, malformed, or wrong protocol) trigger the fallback
+- A warning is logged to the console for debugging
+- The 404 page is shown instead of a broken window
+
+#### 404 Configuration Examples
+
+**Example 1: Basic Setup with Default 404**
+
+```typescript
+import { initializeNoticeSystem, setNoticeConfig } from 'tauri-notice-window'
+
+// Use default /404 fallback
+setNoticeConfig({
+  routePrefix: '/notice',
+  // notFoundUrl defaults to '/404' if not specified
+})
+
+initializeNoticeSystem()
+```
+
+**Example 2: Custom 404 Route**
+
+```typescript
+// With custom 404 page inside notice route
+setNoticeConfig({
+  routePrefix: '/notice',
+  notFoundUrl: '/notice/error',
+})
+
+// Create the error page at /notice/error
+// app/notice/error/page.tsx
+import { useCloseNotice } from 'tauri-notice-window'
+
+export default function NoticeError() {
+  const { closeNotice } = useCloseNotice()
+  
+  return (
+    <div className="error-page">
+      <h2>Oops! Something went wrong</h2>
+      <p>This notification type is not supported.</p>
+      <button onClick={closeNotice}>Dismiss</button>
+    </div>
+  )
+}
+```
+
+**Example 3: Using External URL as 404 Fallback**
+
+```typescript
+// You can use absolute URLs for the 404 page
+setNoticeConfig({
+  routePrefix: '/notice',
+  notFoundUrl: 'https://yourapp.com/error',
+})
+
+// Or use Tauri's custom protocol
+setNoticeConfig({
+  routePrefix: '/notice',
+  notFoundUrl: 'tauri://localhost/error',
+})
+```
+
+**Example 4: Styled 404 Component**
+
+```typescript
+// app/notice/404/page.tsx
+import { useCloseNotice, useMessageQueue } from 'tauri-notice-window'
+
+export default function NotFound() {
+  const { closeNotice } = useCloseNotice()
+  const { queueLength } = useMessageQueue()
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100vh',
+      padding: '20px',
+      backgroundColor: '#f5f5f5',
+    }}>
+      <h1 style={{ fontSize: '48px', margin: '0' }}>404</h1>
+      <p style={{ fontSize: '18px', color: '#666' }}>
+        Invalid notification type
+      </p>
+      {queueLength > 0 && (
+        <p style={{ fontSize: '14px', color: '#999' }}>
+          {queueLength} more notification{queueLength > 1 ? 's' : ''} in queue
+        </p>
+      )}
+      <button 
+        onClick={closeNotice}
+        style={{
+          marginTop: '20px',
+          padding: '10px 20px',
+          fontSize: '16px',
+          cursor: 'pointer',
+          border: 'none',
+          borderRadius: '4px',
+          backgroundColor: '#007bff',
+          color: 'white',
+        }}
+      >
+        Close
+      </button>
+    </div>
+  )
+}
+```
+
+**Example 5: URL Validation Scenarios**
+
+The library validates URLs and automatically falls back to 404 in these cases:
+
+```typescript
+// These message types will trigger 404 fallback:
+
+// ❌ Empty or undefined type
+await showNotice({
+  id: '1',
+  title: 'Test',
+  type: '',  // Empty string → Invalid
+  data: {},
+})
+
+// ❌ Invalid characters that break URL
+await showNotice({
+  id: '2',
+  title: 'Test',
+  type: '../../../etc/passwd',  // Path traversal → Invalid
+  data: {},
+})
+
+// ❌ If routePrefix is misconfigured
+setNoticeConfig({
+  routePrefix: '',  // Empty prefix creates invalid URL
+})
+
+// ✅ These URLs are VALID:
+await showNotice({
+  id: '3',
+  title: 'Test',
+  type: 'announcement',  // Creates: /notice/announcement?id=3
+  data: {},
+})
+
+// Valid URL patterns:
+// - Starts with /
+// - Starts with http:// or https://
+// - Starts with tauri://
+```
+
+**Example 6: Debugging Invalid URLs**
+
+When a URL validation fails, a console warning is logged:
+
+```typescript
+// Console output when validation fails:
+// ⚠️ Invalid window URL: /notice/?id=123. Using fallback 404 page.
+
+// To debug, check:
+setNoticeConfig({
+  routePrefix: '/notice',
+  notFoundUrl: '/notice/404',
+})
+
+// Make sure your message has valid type:
+await showNotice({
+  id: '123',
+  title: 'My Notice',
+  type: 'announcement',  // Should match a route in your app
+  data: {},
+})
+```
+
+**Example 7: Next.js App Router Setup**
+
+```typescript
+// app/layout.tsx
+import { initializeNoticeSystem, setNoticeConfig } from 'tauri-notice-window'
+
+export default function RootLayout({ children }) {
+  useEffect(() => {
+    setNoticeConfig({
+      routePrefix: '/notice',
+      notFoundUrl: '/notice/not-found',  // Next.js App Router style
+      defaultWidth: 400,
+      defaultHeight: 300,
+    })
+    
+    initializeNoticeSystem()
+  }, [])
+
+  return <html>{children}</html>
+}
+
+// Create: app/notice/not-found/page.tsx
+import { useCloseNotice } from 'tauri-notice-window'
+
+export default function NoticeNotFound() {
+  const { closeNotice } = useCloseNotice()
+  
+  return (
+    <div className="p-6 text-center">
+      <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
+      <p className="mb-4">The notification page you're looking for doesn't exist.</p>
+      <button 
+        onClick={closeNotice}
+        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Close Notification
+      </button>
+    </div>
+  )
+}
+```
+
+**Example 8: React Router Setup**
+
+```typescript
+// App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { initializeNoticeSystem, setNoticeConfig } from 'tauri-notice-window'
+
+function App() {
+  useEffect(() => {
+    setNoticeConfig({
+      routePrefix: '/notice',
+      notFoundUrl: '/notice/404',
+      defaultWidth: 400,
+      defaultHeight: 300,
+    })
+    
+    initializeNoticeSystem()
+  }, [])
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Main app routes */}
+        <Route path="/" element={<Home />} />
+        
+        {/* Notice routes */}
+        <Route path="/notice/announcement" element={<AnnouncementNotice />} />
+        <Route path="/notice/alert" element={<AlertNotice />} />
+        <Route path="/notice/404" element={<NoticeNotFound />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+// NoticeNotFound.tsx
+import { useCloseNotice } from 'tauri-notice-window'
+
+export function NoticeNotFound() {
+  const { closeNotice } = useCloseNotice()
+  
+  return (
+    <div className="error-container">
+      <h1>404 - Notification Not Found</h1>
+      <p>This notification type is not recognized.</p>
+      <button onClick={closeNotice}>Close</button>
+    </div>
+  )
+}
+```
+
+**Example 9: Advanced Error Handling with Logging**
+
+```typescript
+// app/notice/error/page.tsx
+import { useEffect } from 'react'
+import { useCloseNotice, useMessageQueue } from 'tauri-notice-window'
+
+export default function NoticeError() {
+  const { closeNotice } = useCloseNotice()
+  const { currentMessage } = useMessageQueue()
+
+  useEffect(() => {
+    // Log error for debugging
+    if (currentMessage) {
+      console.error('Invalid notice type:', {
+        id: currentMessage.id,
+        type: currentMessage.type,
+        timestamp: new Date().toISOString(),
+      })
+      
+      // Optional: Send to error tracking service
+      // trackError('Invalid Notice Type', { messageId: currentMessage.id })
+    }
+  }, [currentMessage])
+
+  return (
+    <div className="error-page">
+      <div className="error-icon">⚠️</div>
+      <h1>Unable to Display Notification</h1>
+      <p>The notification type "{currentMessage?.type}" is not supported.</p>
+      <details>
+        <summary>Technical Details</summary>
+        <pre>{JSON.stringify(currentMessage, null, 2)}</pre>
+      </details>
+      <button onClick={closeNotice}>Dismiss</button>
+    </div>
+  )
+}
+```
+
+**Example 10: Multi-Environment Configuration**
+
+```typescript
+// config/notice.config.ts
+export const getNoticeConfig = () => {
+  const isDev = process.env.NODE_ENV === 'development'
+  
+  return {
+    routePrefix: '/notice',
+    notFoundUrl: isDev 
+      ? '/notice/dev-404'  // Detailed error in dev
+      : '/notice/404',     // Simple error in production
+    defaultWidth: 400,
+    defaultHeight: 300,
+  }
+}
+
+// app/layout.tsx
+import { initializeNoticeSystem, setNoticeConfig } from 'tauri-notice-window'
+import { getNoticeConfig } from '@/config/notice.config'
+
+export default function RootLayout({ children }) {
+  useEffect(() => {
+    setNoticeConfig(getNoticeConfig())
+    initializeNoticeSystem()
+  }, [])
+
+  return <html>{children}</html>
+}
+
+// app/notice/dev-404/page.tsx (Development-only)
+export default function DevNotFound() {
+  const { closeNotice } = useCloseNotice()
+  const { currentMessage } = useMessageQueue()
+  
+  return (
+    <div className="dev-error">
+      <h1>🔧 Development Error</h1>
+      <h2>Invalid Notice Route</h2>
+      <div className="error-details">
+        <p><strong>Route Attempted:</strong> /notice/{currentMessage?.type}</p>
+        <p><strong>Message ID:</strong> {currentMessage?.id}</p>
+        <p><strong>Title:</strong> {currentMessage?.title}</p>
+      </div>
+      <div className="fix-suggestion">
+        <h3>How to fix:</h3>
+        <ol>
+          <li>Create route at: app/notice/{currentMessage?.type}/page.tsx</li>
+          <li>Or update message.type to match existing route</li>
+        </ol>
+      </div>
+      <button onClick={closeNotice}>Close</button>
+    </div>
+  )
+}
+```
+
 ## API Reference
 
 ### Types
@@ -214,6 +613,7 @@ interface NoticeConfig {
   databaseName: string    // Database name (default: 'tauri-notice-db')
   defaultWidth: number    // Default window width (default: 400)
   defaultHeight: number   // Default window height (default: 300)
+  notFoundUrl?: string    // Custom 404 page URL for invalid routes (default: '/404')
 }
 ```
 
@@ -304,8 +704,11 @@ setNoticeConfig({
   databaseName: 'my-app-notices',
   defaultWidth: 500,
   defaultHeight: 400,
+  notFoundUrl: '/error', // Custom 404 page
 })
 ```
+
+**URL Validation:** Before creating a WebviewWindow, the library validates the window URL. If the URL is invalid (empty, malformed, or doesn't start with `/`, `http://`, `https://`, or `tauri://`), it automatically falls back to the `notFoundUrl` and logs a warning.
 
 ### Database Utilities
 
