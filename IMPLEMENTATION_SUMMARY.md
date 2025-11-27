@@ -198,3 +198,4 @@ await initializeNoticeSystem()
 ✅ **Architecture Sound** - Zustand-first design maintained
 
 The library now provides a simple, clean API while maintaining the correct Zustand-first architecture internally.
+

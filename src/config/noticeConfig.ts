@@ -11,6 +11,7 @@ const defaultConfig: NoticeConfig = {
   defaultWidth: 400,
   defaultHeight: 300,
   notFoundUrl: '/404', // Default 404 page
+  defaultDecorations: true, // Show title bar by default
 }
 
 /**

@@ -133,6 +133,9 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
   const width = message.min_width || config.defaultWidth
   const height = message.min_height || config.defaultHeight
 
+  // Determine decorations (title bar) setting
+  const decorations = message.decorations ?? config.defaultDecorations ?? true
+
   // Calculate window position
   const { x, y } = await calculateWindowPosition(width, height, message.windowPosition)
 
@@ -146,7 +149,7 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
       x,
       y,
       resizable: true,
-      decorations: true,
+      decorations,
       skipTaskbar: false,
       alwaysOnTop: true,
     })

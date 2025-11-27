@@ -30,6 +30,8 @@ export interface MessageType {
   min_height?: number
   /** Window position configuration (default: right-bottom with 20px padding) */
   windowPosition?: WindowPosition
+  /** Whether to show window decorations/title bar (default: true) */
+  decorations?: boolean
 }
 
 /**
@@ -62,5 +64,7 @@ export interface NoticeConfig {
   defaultHeight: number
   /** Custom 404 page URL when windowUrl is invalid (optional) */
   notFoundUrl?: string
+  /** Default window decorations/title bar setting (default: true) */
+  defaultDecorations?: boolean
 }
 

@@ -124,6 +124,7 @@ function App() {
       defaultWidth: 400, // default width of the notice window
       defaultHeight: 300, // default height of the notice window
       notFoundUrl: '/404', // custom 404 page when route is invalid (optional)
+      defaultDecorations: true, // show window title bar by default (optional)
     })
 
     // Initialize the system
@@ -593,6 +594,7 @@ interface MessageType {
   min_width?: number      // Minimum window width
   min_height?: number     // Minimum window height
   windowPosition?: WindowPosition  // Window position (default: right-bottom)
+  decorations?: boolean   // Show window title bar (default: true)
 }
 ```
 
@@ -616,6 +618,7 @@ interface NoticeConfig {
   defaultWidth: number    // Default window width (default: 400)
   defaultHeight: number   // Default window height (default: 300)
   notFoundUrl?: string    // Custom 404 page URL for invalid routes (default: '/404')
+  defaultDecorations?: boolean  // Show window title bar by default (default: true)
 }
 ```
 
@@ -707,6 +710,7 @@ setNoticeConfig({
   defaultWidth: 500,
   defaultHeight: 400,
   notFoundUrl: '/error', // Custom 404 page
+  defaultDecorations: false, // Hide title bar globally
 })
 ```
 
@@ -975,10 +979,10 @@ function LogoutButton() {
 }
 ```
 
-### Custom Window Sizing and Positioning
+### Custom Window Sizing, Positioning, and Decorations
 
 ```typescript
-// Default: right-bottom with 20px padding
+// Default: right-bottom with 20px padding, with title bar
 await showNotice({
   id: '123',
   title: 'Default Position',
@@ -1036,6 +1040,27 @@ await showNotice({
   type: 'announcement',
   data: { content: 'In the middle' },
   windowPosition: { position: 'center' },
+})
+
+// Borderless window (no title bar)
+await showNotice({
+  id: '129',
+  title: 'Borderless',
+  type: 'announcement',
+  data: { content: 'Custom chrome' },
+  decorations: false,  // Hide native title bar
+})
+
+// Borderless + custom position
+await showNotice({
+  id: '130',
+  title: 'Toast Style',
+  type: 'toast',
+  data: { content: 'Quick notification' },
+  min_width: 300,
+  min_height: 80,
+  decorations: false,
+  windowPosition: { position: 'right-top', padding: 10 },
 })
 ```
 
