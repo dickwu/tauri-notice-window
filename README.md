@@ -1043,6 +1043,8 @@ await showNotice({
 })
 
 // Borderless window (no title bar)
+// Note: On macOS, uses titleBarStyle: 'overlay' internally for compatibility
+// On Windows/Linux, uses decorations: false
 await showNotice({
   id: '129',
   title: 'Borderless',
@@ -1051,7 +1053,7 @@ await showNotice({
   decorations: false,  // Hide native title bar
 })
 
-// Borderless + custom position
+// Borderless + custom position (toast style)
 await showNotice({
   id: '130',
   title: 'Toast Style',

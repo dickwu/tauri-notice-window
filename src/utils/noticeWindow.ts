@@ -10,6 +10,14 @@ import { getNoticeConfig } from '../config/noticeConfig'
 const activeWindows = new Map<string, WebviewWindow>()
 
 /**
+ * Detect if running on macOS
+ */
+const isMacOS = (): boolean => {
+  return navigator.platform.toLowerCase().includes('mac') ||
+    navigator.userAgent.toLowerCase().includes('mac')
+}
+
+/**
  * Validate if a URL is usable for WebviewWindow
  * @param url - URL to validate
  * @returns true if URL appears valid
@@ -140,8 +148,9 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
   const { x, y } = await calculateWindowPosition(width, height, message.windowPosition)
 
   try {
-    // Create new webview window
-    const noticeWindow = new WebviewWindow(windowLabel, {
+    // Build window options based on platform and decorations setting
+    // macOS requires special handling for borderless windows
+    const windowOptions: ConstructorParameters<typeof WebviewWindow>[1] = {
       url: windowUrl,
       title: message.title,
       width,
@@ -149,10 +158,27 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
       x,
       y,
       resizable: true,
-      decorations,
       skipTaskbar: false,
       alwaysOnTop: true,
-    })
+    }
+
+    if (decorations) {
+      // Standard window with title bar
+      windowOptions.decorations = true
+    } else if (isMacOS()) {
+      // macOS: Use titleBarStyle for borderless effect
+      // decorations: false doesn't work reliably on macOS
+      windowOptions.decorations = true
+      windowOptions.titleBarStyle = 'overlay'
+      windowOptions.hiddenTitle = true
+    } else {
+      // Windows/Linux: Use decorations: false directly
+      windowOptions.decorations = false
+      windowOptions.transparent = true
+    }
+
+    // Create new webview window
+    const noticeWindow = new WebviewWindow(windowLabel, windowOptions)
 
     // Track active window
     activeWindows.set(normalizedId, noticeWindow)
