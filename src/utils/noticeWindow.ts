@@ -184,8 +184,56 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
     activeWindows.set(normalizedId, noticeWindow)
     store.addActiveWindow(normalizedId)
 
+    // Auto-close timeout for borderless windows (decorations=false)
+    // When there's no title bar, user can't manually close a stuck window
+    let loadTimeoutId: ReturnType<typeof setTimeout> | null = null
+    const loadTimeout = config.loadTimeout ?? 10000
+
+    if (!decorations && loadTimeout > 0) {
+      loadTimeoutId = setTimeout(async () => {
+        console.warn(`Notice window ${windowLabel} load timeout - auto closing`)
+        try {
+          await noticeWindow.close()
+        } catch (e) {
+          // Window may already be closed
+        }
+      }, loadTimeout)
+    }
+
+    // Clear timeout when window is created successfully
+    noticeWindow.once('tauri://created', () => {
+      if (loadTimeoutId) {
+        clearTimeout(loadTimeoutId)
+        loadTimeoutId = null
+      }
+      console.log(`Notice window created successfully: ${windowLabel}`)
+    })
+
+    // Handle webview errors - auto close on error when borderless
+    noticeWindow.once('tauri://error', async (event) => {
+      console.error(`Notice window error: ${windowLabel}`, event)
+      if (loadTimeoutId) {
+        clearTimeout(loadTimeoutId)
+        loadTimeoutId = null
+      }
+      // Always close on error when decorations is false (user can't close manually)
+      if (!decorations) {
+        try {
+          await noticeWindow.close()
+        } catch (e) {
+          // Window may already be closed
+        }
+      }
+    })
+
     // Register destroy event listener
     noticeWindow.once('tauri://destroyed', async () => {
+      // Clear any pending timeout
+      if (loadTimeoutId) {
+        clearTimeout(loadTimeoutId)
+        loadTimeoutId = null
+      }
+
       // Clean up tracking
       activeWindows.delete(normalizedId)
       store.removeActiveWindow(normalizedId)

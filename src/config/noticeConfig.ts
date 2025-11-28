@@ -12,6 +12,7 @@ const defaultConfig: NoticeConfig = {
   defaultHeight: 300,
   notFoundUrl: '/404', // Default 404 page
   defaultDecorations: true, // Show title bar by default
+  loadTimeout: 4000, // Auto-close after 4s if stuck (only when decorations=false)
 }
 
 /**

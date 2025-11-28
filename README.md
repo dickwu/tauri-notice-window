@@ -11,6 +11,7 @@ A reusable React library for cross-window notification management in Tauri v2+ a
 - **One-at-a-Time Display**: Only one notice window shown at a time
 - **Customizable Routes**: Configurable router prefix for notice pages
 - **URL Validation & 404 Fallback**: Automatic validation with customizable error pages for invalid routes
+- **Auto-Close for Borderless Windows**: Stuck borderless windows auto-close after configurable timeout
 - **Type Safety**: Full TypeScript support
 - **Easy Integration**: Simple hooks API
 - **Tauri v2 Ready**: Uses latest Tauri v2 window APIs
@@ -125,6 +126,7 @@ function App() {
       defaultHeight: 300, // default height of the notice window
       notFoundUrl: '/404', // custom 404 page when route is invalid (optional)
       defaultDecorations: true, // show window title bar by default (optional)
+      loadTimeout: 4000, // auto-close timeout for borderless windows in ms (optional)
     })
 
     // Initialize the system
@@ -619,6 +621,7 @@ interface NoticeConfig {
   defaultHeight: number   // Default window height (default: 300)
   notFoundUrl?: string    // Custom 404 page URL for invalid routes (default: '/404')
   defaultDecorations?: boolean  // Show window title bar by default (default: true)
+  loadTimeout?: number    // Auto-close timeout in ms for borderless windows (default: 4000)
 }
 ```
 
@@ -711,6 +714,7 @@ setNoticeConfig({
   defaultHeight: 400,
   notFoundUrl: '/error', // Custom 404 page
   defaultDecorations: false, // Hide title bar globally
+  loadTimeout: 4000, // Auto-close stuck borderless windows after 4s
 })
 ```
 
@@ -1063,6 +1067,18 @@ await showNotice({
   min_height: 80,
   decorations: false,
   windowPosition: { position: 'right-top', padding: 10 },
+})
+```
+
+**Auto-Close for Borderless Windows:**
+
+When `decorations: false`, the window has no title bar, so users cannot manually close a stuck window. The library automatically closes borderless windows if they fail to load within `loadTimeout` (default: 4 seconds).
+
+```typescript
+// Customize or disable auto-close timeout
+setNoticeConfig({
+  loadTimeout: 6000, // 6 seconds
+  // loadTimeout: 0,  // Disable auto-close
 })
 ```
 

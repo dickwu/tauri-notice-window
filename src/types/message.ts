@@ -66,5 +66,11 @@ export interface NoticeConfig {
   notFoundUrl?: string
   /** Default window decorations/title bar setting (default: true) */
   defaultDecorations?: boolean
+  /** 
+   * Auto-close timeout in milliseconds when decorations is false (default: 10000)
+   * If the window fails to load within this time, it will be automatically closed.
+   * Set to 0 to disable auto-close.
+   */
+  loadTimeout?: number
 }
 
