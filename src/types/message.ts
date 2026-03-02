@@ -66,11 +66,19 @@ export interface NoticeConfig {
   notFoundUrl?: string
   /** Default window decorations/title bar setting (default: true) */
   defaultDecorations?: boolean
-  /** 
+  /**
    * Auto-close timeout in milliseconds when decorations is false (default: 10000)
    * If the window fails to load within this time, it will be automatically closed.
    * Set to 0 to disable auto-close.
    */
   loadTimeout?: number
+  /** Enable auto-sizing based on rendered content (default: true) */
+  autoSize?: boolean
+  /** Maximum window width when auto-sizing (default: 600) */
+  maxWidth?: number
+  /** Maximum window height when auto-sizing (default: 800) */
+  maxHeight?: number
+  /** Fallback timeout in ms to show window if measurement fails (default: 3000) */
+  autoSizeTimeout?: number
 }
 

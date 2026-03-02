@@ -13,6 +13,10 @@ const defaultConfig: NoticeConfig = {
   notFoundUrl: '/404', // Default 404 page
   defaultDecorations: true, // Show title bar by default
   loadTimeout: 4000, // Auto-close after 4s if stuck (only when decorations=false)
+  autoSize: true, // Auto-size windows based on rendered content
+  maxWidth: 600, // Max width when auto-sizing
+  maxHeight: 800, // Max height when auto-sizing
+  autoSizeTimeout: 3000, // Fallback show timeout if measurement fails
 }
 
 /**

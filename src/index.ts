@@ -24,17 +24,21 @@ export { NoticeLayout } from './components/NoticeLayout'
 export { setNoticeConfig, getNoticeConfig } from './config/noticeConfig'
 
 // Utils
-import { 
+import {
   initializeNoticeWindowSystem,
   createNoticeWindow,
   closeNoticeWindow,
   closeAllNoticeWindows,
+  calculateWindowPosition,
+  getLogicalScreenSize,
 } from './utils/noticeWindow'
-export { 
+export {
   initializeNoticeWindowSystem,
   createNoticeWindow,
   closeNoticeWindow,
   closeAllNoticeWindows,
+  calculateWindowPosition,
+  getLogicalScreenSize,
 }
 
 import { 

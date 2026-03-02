@@ -24,10 +24,8 @@ const isMacOS = (): boolean => {
  */
 const isValidWindowUrl = (url: string): boolean => {
   if (!url || url.trim() === '') return false
-  
-  // Check for basic URL structure
+
   try {
-    // Allow relative URLs (starting with /) and absolute URLs
     if (url.startsWith('/')) return true
     if (url.startsWith('http://') || url.startsWith('https://')) return true
     if (url.startsWith('tauri://')) return true
@@ -38,13 +36,37 @@ const isValidWindowUrl = (url: string): boolean => {
 }
 
 /**
- * Calculate window position based on position preset or custom coordinates
- * @param width - Window width
- * @param height - Window height
- * @param positionConfig - Position configuration
- * @returns Object with x and y coordinates
+ * Get logical screen dimensions (accounts for DPI scaling)
+ * primaryMonitor().size returns physical pixels; Tauri window APIs expect logical pixels.
+ * @returns Object with logical screenWidth and screenHeight
  */
-const calculateWindowPosition = async (
+export const getLogicalScreenSize = async (): Promise<{ screenWidth: number; screenHeight: number }> => {
+  let screenWidth = 1920
+  let screenHeight = 1080
+
+  try {
+    const monitor = await primaryMonitor()
+    if (monitor?.size) {
+      const scaleFactor = monitor.scaleFactor || 1
+      screenWidth = monitor.size.width / scaleFactor
+      screenHeight = monitor.size.height / scaleFactor
+    }
+  } catch (error) {
+    console.warn('Failed to get monitor info, using defaults:', error)
+  }
+
+  return { screenWidth, screenHeight }
+}
+
+/**
+ * Calculate window position based on position preset or custom coordinates
+ * Uses logical pixels (DPI-aware) for correct placement on HiDPI displays.
+ * @param width - Window width in logical pixels
+ * @param height - Window height in logical pixels
+ * @param positionConfig - Position configuration
+ * @returns Object with x and y coordinates in logical pixels
+ */
+export const calculateWindowPosition = async (
   width: number,
   height: number,
   positionConfig?: WindowPosition
@@ -56,19 +78,7 @@ const calculateWindowPosition = async (
     return { x: positionConfig.x, y: positionConfig.y }
   }
 
-  // Get screen dimensions
-  let screenWidth = 1920
-  let screenHeight = 1080
-
-  try {
-    const monitor = await primaryMonitor()
-    if (monitor?.size) {
-      screenWidth = monitor.size.width
-      screenHeight = monitor.size.height
-    }
-  } catch (error) {
-    console.warn('Failed to get monitor info, using defaults:', error)
-  }
+  const { screenWidth, screenHeight } = await getLogicalScreenSize()
 
   // Calculate position based on preset
   const position = positionConfig?.position ?? 'right-bottom'
@@ -105,7 +115,6 @@ const calculateWindowPosition = async (
       }
 
     default:
-      // Default to right-bottom
       return {
         x: screenWidth - width - padding,
         y: screenHeight - height - padding,
@@ -115,6 +124,8 @@ const calculateWindowPosition = async (
 
 /**
  * Create a new notice window for the given message
+ * When autoSize is enabled, the window is created hidden and will be shown
+ * by NoticeLayout after content measurement and resize.
  * @param message - Message to display in the window
  */
 export const createNoticeWindow = async (message: MessageType): Promise<void> => {
@@ -130,7 +141,7 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
   const config = getNoticeConfig()
   const windowLabel = `notice-${normalizedId}`
   let windowUrl = `${config.routePrefix}/${message.type}?id=${message.id}`
-  
+
   // Validate URL and fallback to 404 if invalid
   if (!isValidWindowUrl(windowUrl)) {
     console.warn(`Invalid window URL: ${windowUrl}. Using fallback 404 page.`)
@@ -144,12 +155,14 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
   // Determine decorations (title bar) setting
   const decorations = message.decorations ?? config.defaultDecorations ?? true
 
+  // Determine if auto-sizing is enabled
+  const autoSize = config.autoSize ?? true
+
   // Calculate window position
   const { x, y } = await calculateWindowPosition(width, height, message.windowPosition)
 
   try {
     // Build window options based on platform and decorations setting
-    // macOS requires special handling for borderless windows
     const windowOptions: ConstructorParameters<typeof WebviewWindow>[1] = {
       url: windowUrl,
       title: message.title,
@@ -162,17 +175,19 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
       alwaysOnTop: true,
     }
 
+    // When autoSize is enabled, create the window hidden.
+    // NoticeLayout will measure content, resize, reposition, then show.
+    if (autoSize) {
+      windowOptions.visible = false
+    }
+
     if (decorations) {
-      // Standard window with title bar
       windowOptions.decorations = true
     } else if (isMacOS()) {
-      // macOS: Use titleBarStyle for borderless effect
-      // decorations: false doesn't work reliably on macOS
       windowOptions.decorations = true
       windowOptions.titleBarStyle = 'overlay'
       windowOptions.hiddenTitle = true
     } else {
-      // Windows/Linux: Use decorations: false directly
       windowOptions.decorations = false
       windowOptions.transparent = true
     }
@@ -185,7 +200,6 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
     store.addActiveWindow(normalizedId)
 
     // Auto-close timeout for borderless windows (decorations=false)
-    // When there's no title bar, user can't manually close a stuck window
     let loadTimeoutId: ReturnType<typeof setTimeout> | null = null
     const loadTimeout = config.loadTimeout ?? 10000
 
@@ -216,7 +230,6 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
         clearTimeout(loadTimeoutId)
         loadTimeoutId = null
       }
-      // Always close on error when decorations is false (user can't close manually)
       if (!decorations) {
         try {
           await noticeWindow.close()
@@ -228,27 +241,22 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
 
     // Register destroy event listener
     noticeWindow.once('tauri://destroyed', async () => {
-      // Clear any pending timeout
       if (loadTimeoutId) {
         clearTimeout(loadTimeoutId)
         loadTimeoutId = null
       }
 
-      // Clean up tracking
       activeWindows.delete(normalizedId)
       store.removeActiveWindow(normalizedId)
 
-      // Mark as shown in database via store
       await store.markMessageAsShown(normalizedId)
 
-      // Show next message
       store.clearCurrent()
     })
 
-    console.log(`Created notice window: ${windowLabel}`)
+    console.log(`Created notice window: ${windowLabel} (autoSize: ${autoSize}, visible: ${!autoSize})`)
   } catch (error) {
     console.error('Failed to create notice window:', error)
-    // Clean up on error
     store.removeActiveWindow(normalizedId)
     store.clearCurrent()
   }
@@ -268,13 +276,11 @@ export const closeNoticeWindow = async (messageId: string): Promise<void> => {
       await window.close()
       activeWindows.delete(normalizedId)
       store.removeActiveWindow(normalizedId)
-      
-      // Mark as shown to prevent it from appearing again
+
       await store.markMessageAsShown(normalizedId)
-      
-      // Clear current message and advance queue
+
       store.clearCurrent()
-      
+
       console.log(`Closed notice window: ${normalizedId}`)
     } catch (error) {
       console.error('Failed to close notice window:', error)
@@ -299,11 +305,9 @@ export const closeAllNoticeWindows = async (): Promise<void> => {
 export const initializeNoticeWindowSystem = (): void => {
   let previousMessage: MessageType | null = null
 
-  // Subscribe to store changes and watch for currentMessage updates
   useMessageQueueStore.subscribe((state) => {
     const currentMessage = state.currentMessage
-    
-    // Only create window if currentMessage changed and is not null
+
     if (currentMessage && currentMessage !== previousMessage) {
       previousMessage = currentMessage
       createNoticeWindow(currentMessage)
@@ -314,4 +318,3 @@ export const initializeNoticeWindowSystem = (): void => {
 
   console.log('Notice window system initialized')
 }
-
