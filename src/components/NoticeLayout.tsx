@@ -32,6 +32,10 @@ export const useNoticeWindowContext = (): NoticeWindowContextType => useContext(
 
 /**
  * Resize and reposition the current window to fit measured content, then show it.
+ *
+ * measuredHeight is the webview content height (CSS pixels).
+ * setSize() sets the OUTER window size (including title bar/borders).
+ * We add a chrome buffer to ensure content isn't clipped by window decorations.
  */
 const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
   try {
@@ -40,7 +44,12 @@ const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
     const maxHeight = config.maxHeight ?? 800
     const minHeight = config.defaultHeight || 300
 
-    const height = Math.max(minHeight, Math.min(Math.ceil(measuredHeight), maxHeight))
+    // Window chrome (title bar + borders) takes space from the outer window size.
+    // macOS standard title bar: ~28px, Windows: ~32px.
+    // We add a buffer so the webview content area fits the measured content.
+    const chromeBuffer = 32
+    const targetOuterHeight = Math.ceil(measuredHeight) + chromeBuffer
+    const height = Math.max(minHeight, Math.min(targetOuterHeight, maxHeight))
 
     const win = getCurrentWebviewWindow()
 
@@ -50,7 +59,7 @@ const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
     await win.setPosition(new LogicalPosition(x, y))
 
     await win.show()
-    console.log(`[NoticeLayout] Auto-sized window to ${width}x${height}`)
+    console.log(`[NoticeLayout] Auto-sized window to ${width}x${height} (content=${Math.ceil(measuredHeight)}, chrome=${chromeBuffer})`)
   } catch (error) {
     console.error('[NoticeLayout] Failed to auto-size, showing window as-is:', error)
     try {
@@ -163,46 +172,75 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
 
   // Auto-size: after content renders at natural height (no h-screen constraint),
   // measure the container and resize the window to fit.
+  //
+  // Approach: temporarily set the container to position:fixed + height:auto so it is
+  // completely detached from the document flow. This bypasses ALL ancestor height
+  // constraints (body { height:100vh }, Ant Design wrappers, Next.js root divs, etc.)
+  // and lets the container shrink-wrap to its children's natural height.
   useEffect(() => {
     if (!autoSize || !message || windowReady || measuredRef.current) return
 
+    let innerFrameId: number | undefined
+
     // Two rAF frames: first ensures paint, second ensures layout is fully settled
-    const outerFrame = requestAnimationFrame(() => {
-      const innerFrame = requestAnimationFrame(() => {
+    const outerFrameId = requestAnimationFrame(() => {
+      innerFrameId = requestAnimationFrame(() => {
         if (!containerRef.current || measuredRef.current) return
         measuredRef.current = true
 
-        // Temporarily override body constraints (height: 100vh; overflow: hidden)
-        // so the container can render at its true natural content height.
-        // These are inline style overrides, so they win over the CSS file rules.
-        const body = document.body
-        const savedBodyHeight = body.style.height
-        const savedBodyOverflow = body.style.overflow
-        body.style.height = 'auto'
-        body.style.overflow = 'visible'
+        const container = containerRef.current
+        const currentConfig = getNoticeConfig()
+        const measuredWidth = currentConfig.defaultWidth || 400
 
-        // Force a synchronous layout recalculation before measuring
-        void containerRef.current.offsetHeight
+        // Save current inline styles
+        const saved = {
+          position: container.style.position,
+          top: container.style.top,
+          left: container.style.left,
+          width: container.style.width,
+          height: container.style.height,
+          overflow: container.style.overflow,
+        }
 
-        // Use the larger of getBoundingClientRect and scrollHeight for robustness.
-        // scrollHeight captures full content even when overflow is clipped.
-        const rect = containerRef.current.getBoundingClientRect()
-        const contentHeight = Math.max(rect.height, containerRef.current.scrollHeight)
+        // Detach from document flow for accurate measurement.
+        // position:fixed removes all ancestor constraints.
+        // width is set to the target window width so text wraps correctly.
+        // height:auto lets the container size to its content.
+        container.style.position = 'fixed'
+        container.style.top = '0'
+        container.style.left = '0'
+        container.style.width = `${measuredWidth}px`
+        container.style.height = 'auto'
+        container.style.overflow = 'visible'
 
-        console.log(`[NoticeLayout] Measured natural content height: ${contentHeight}px (rect=${rect.height}, scroll=${containerRef.current.scrollHeight})`)
+        // Force synchronous layout recalculation
+        void container.offsetHeight
 
-        // Restore body styles before the async resize (avoids any visual flash)
-        body.style.height = savedBodyHeight
-        body.style.overflow = savedBodyOverflow
+        // scrollHeight is the most reliable measure of total content height
+        const contentHeight = container.scrollHeight
+
+        console.log(`[NoticeLayout] Measured content height: ${contentHeight}px (container detached at ${measuredWidth}px width)`)
+
+        // Restore original styles before the async resize
+        container.style.position = saved.position
+        container.style.top = saved.top
+        container.style.left = saved.left
+        container.style.width = saved.width
+        container.style.height = saved.height
+        container.style.overflow = saved.overflow
 
         resizeAndShowWindow(contentHeight).then(() => {
           setWindowReady(true)
         })
       })
-      return () => cancelAnimationFrame(innerFrame)
     })
 
-    return () => cancelAnimationFrame(outerFrame)
+    return () => {
+      cancelAnimationFrame(outerFrameId)
+      if (innerFrameId !== undefined) {
+        cancelAnimationFrame(innerFrameId)
+      }
+    }
   }, [autoSize, message, windowReady])
 
   // Fallback: show window even if measurement fails
