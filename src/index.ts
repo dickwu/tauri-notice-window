@@ -18,7 +18,7 @@ export { useHideAllNotices } from './hooks/useHideAllNotices'
 export { useMessageQueue } from './hooks/useMessageQueue'
 
 // Components
-export { NoticeLayout } from './components/NoticeLayout'
+export { NoticeLayout, useNoticeWindowContext } from './components/NoticeLayout'
 
 // Configuration
 export { setNoticeConfig, getNoticeConfig } from './config/noticeConfig'

@@ -1,13 +1,37 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { MessageType } from '../types/message'
 import { getMessage } from '../utils/db'
 import { getNoticeConfig } from '../config/noticeConfig'
 import { calculateWindowPosition } from '../utils/noticeWindow'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { LogicalSize, LogicalPosition } from '@tauri-apps/api/dpi'
 
 /**
- * Resize and reposition the current window to fit measured content,
- * then show it. Called internally when autoSize is enabled.
+ * Context provided to all children of NoticeLayout.
+ * windowReady is false during the measurement phase (before auto-sizing),
+ * and true once the window has been sized and is visible.
+ *
+ * Consumers should remove viewport-filling constraints (e.g. h-screen, flex-1)
+ * when windowReady is false so content can render at its natural height for measurement.
+ */
+interface NoticeWindowContextType {
+  windowReady: boolean
+}
+
+const NoticeWindowContext = createContext<NoticeWindowContextType>({ windowReady: true })
+
+/**
+ * Hook for notice window pages to know whether the window has been sized and is visible.
+ * Use this to conditionally apply h-screen / flex-1 only after the window is ready.
+ *
+ * @example
+ * const { windowReady } = useNoticeWindowContext()
+ * <div className={`flex flex-col ${windowReady ? 'h-screen' : ''}`}>
+ */
+export const useNoticeWindowContext = (): NoticeWindowContextType => useContext(NoticeWindowContext)
+
+/**
+ * Resize and reposition the current window to fit measured content, then show it.
  */
 const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
   try {
@@ -16,17 +40,13 @@ const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
     const maxHeight = config.maxHeight ?? 800
     const minHeight = config.defaultHeight || 300
 
-    // Clamp height between min and max
     const height = Math.max(minHeight, Math.min(Math.ceil(measuredHeight), maxHeight))
 
-    const { LogicalSize } = await import('@tauri-apps/api/dpi')
     const win = getCurrentWebviewWindow()
 
     await win.setSize(new LogicalSize(width, height))
 
-    // Recalculate position so the window stays in its configured position
     const { x, y } = await calculateWindowPosition(width, height)
-    const { LogicalPosition } = await import('@tauri-apps/api/dpi')
     await win.setPosition(new LogicalPosition(x, y))
 
     await win.show()
@@ -42,9 +62,6 @@ const resizeAndShowWindow = async (measuredHeight: number): Promise<void> => {
   }
 }
 
-/**
- * Props for NoticeLayout component
- */
 interface NoticeLayoutProps {
   children: (message: MessageType) => ReactNode
   onLoad?: (message: MessageType) => void
@@ -53,8 +70,16 @@ interface NoticeLayoutProps {
 
 /**
  * Layout component for notice windows.
- * Loads the message from database/URL and provides it to children.
- * When autoSize is enabled, measures rendered content then resizes the window to fit.
+ * Loads the message from database/URL and provides it to children via render prop.
+ *
+ * When autoSize is enabled (default: true):
+ * - Window is created hidden (visible: false)
+ * - windowReady starts as false — children should NOT use h-screen/flex-1 during this phase
+ * - After content renders at natural height, the container is measured
+ * - Window is resized to fit, repositioned, then shown
+ * - windowReady becomes true — children should apply h-screen/flex-1 to fill the window
+ *
+ * Use useNoticeWindowContext() in child components to read windowReady.
  */
 export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) => {
   const [message, setMessage] = useState<MessageType | null>(null)
@@ -136,25 +161,31 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
     loadMessage()
   }, [onLoad])
 
-  // Auto-size: measure content after render and resize window
+  // Auto-size: after content renders at natural height (no h-screen constraint),
+  // measure the container and resize the window to fit.
   useEffect(() => {
     if (!autoSize || !message || windowReady || measuredRef.current) return
 
-    // Wait for next animation frame to ensure children have rendered
-    const frameId = requestAnimationFrame(() => {
-      if (!containerRef.current || measuredRef.current) return
-      measuredRef.current = true
+    // Two rAF frames: first ensures paint, second ensures layout is fully settled
+    const outerFrame = requestAnimationFrame(() => {
+      const innerFrame = requestAnimationFrame(() => {
+        if (!containerRef.current || measuredRef.current) return
+        measuredRef.current = true
 
-      const rect = containerRef.current.getBoundingClientRect()
-      resizeAndShowWindow(rect.height).then(() => {
-        setWindowReady(true)
+        const rect = containerRef.current.getBoundingClientRect()
+        console.log(`[NoticeLayout] Measured natural content height: ${rect.height}px`)
+
+        resizeAndShowWindow(rect.height).then(() => {
+          setWindowReady(true)
+        })
       })
+      return () => cancelAnimationFrame(innerFrame)
     })
 
-    return () => cancelAnimationFrame(frameId)
+    return () => cancelAnimationFrame(outerFrame)
   }, [autoSize, message, windowReady])
 
-  // Fallback timeout: show window even if measurement fails
+  // Fallback: show window even if measurement fails
   useEffect(() => {
     if (!autoSize || windowReady) return
 
@@ -184,10 +215,7 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [message, onClose])
 
   if (loading) {
@@ -234,15 +262,21 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
     )
   }
 
-  // When autoSize is enabled:
-  // - Before measurement: render at natural height (no constraint) so we can measure
-  // - After measurement + resize: switch to h-screen so content fills the resized window
+  // Measurement phase (windowReady=false):
+  //   - Container has no height → renders at natural content height
+  //   - Children receive windowReady=false via context → must NOT apply h-screen/flex-1
+  //
+  // Display phase (windowReady=true):
+  //   - Container gets height:100vh to fill the resized window
+  //   - Children receive windowReady=true → can apply h-screen/flex-1
   return (
-    <div
-      ref={containerRef}
-      style={windowReady ? { height: '100vh' } : undefined}
-    >
-      {children(message)}
-    </div>
+    <NoticeWindowContext.Provider value={{ windowReady }}>
+      <div
+        ref={containerRef}
+        style={windowReady ? { height: '100vh' } : undefined}
+      >
+        {children(message)}
+      </div>
+    </NoticeWindowContext.Provider>
   )
 }
