@@ -172,10 +172,30 @@ export const NoticeLayout = ({ children, onLoad, onClose }: NoticeLayoutProps) =
         if (!containerRef.current || measuredRef.current) return
         measuredRef.current = true
 
-        const rect = containerRef.current.getBoundingClientRect()
-        console.log(`[NoticeLayout] Measured natural content height: ${rect.height}px`)
+        // Temporarily override body constraints (height: 100vh; overflow: hidden)
+        // so the container can render at its true natural content height.
+        // These are inline style overrides, so they win over the CSS file rules.
+        const body = document.body
+        const savedBodyHeight = body.style.height
+        const savedBodyOverflow = body.style.overflow
+        body.style.height = 'auto'
+        body.style.overflow = 'visible'
 
-        resizeAndShowWindow(rect.height).then(() => {
+        // Force a synchronous layout recalculation before measuring
+        void containerRef.current.offsetHeight
+
+        // Use the larger of getBoundingClientRect and scrollHeight for robustness.
+        // scrollHeight captures full content even when overflow is clipped.
+        const rect = containerRef.current.getBoundingClientRect()
+        const contentHeight = Math.max(rect.height, containerRef.current.scrollHeight)
+
+        console.log(`[NoticeLayout] Measured natural content height: ${contentHeight}px (rect=${rect.height}, scroll=${containerRef.current.scrollHeight})`)
+
+        // Restore body styles before the async resize (avoids any visual flash)
+        body.style.height = savedBodyHeight
+        body.style.overflow = savedBodyOverflow
+
+        resizeAndShowWindow(contentHeight).then(() => {
           setWindowReady(true)
         })
       })
