@@ -148,18 +148,24 @@ export const createNoticeWindow = async (message: MessageType): Promise<void> =>
     windowUrl = config.notFoundUrl || '/404'
   }
 
+  // Determine if auto-sizing is enabled
+  const autoSize = config.autoSize ?? true
+
   // Determine window dimensions
   const width = message.min_width || config.defaultWidth
-  const height = message.min_height || config.defaultHeight
+  // When autoSize is enabled, start the hidden window at maxHeight so that
+  // 100vh in the webview is large enough for content to render at natural height.
+  // NoticeLayout will then measure the content and shrink the window to fit.
+  const height = autoSize
+    ? (config.maxHeight ?? 800)
+    : (message.min_height || config.defaultHeight)
 
   // Determine decorations (title bar) setting
   const decorations = message.decorations ?? config.defaultDecorations ?? true
 
-  // Determine if auto-sizing is enabled
-  const autoSize = config.autoSize ?? true
-
-  // Calculate window position
-  const { x, y } = await calculateWindowPosition(width, height, message.windowPosition)
+  // Calculate window position (use defaultHeight for initial position so it doesn't jump)
+  const initialPositionHeight = message.min_height || config.defaultHeight
+  const { x, y } = await calculateWindowPosition(width, initialPositionHeight, message.windowPosition)
 
   try {
     // Build window options based on platform and decorations setting
