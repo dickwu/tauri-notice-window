@@ -23,6 +23,7 @@ const defaultConfig: NoticeConfig = {
  * Load config from localStorage
  */
 const loadConfigFromStorage = (): NoticeConfig => {
+  if (typeof window === 'undefined') return defaultConfig
   try {
     const stored = localStorage.getItem(CONFIG_STORAGE_KEY)
     if (stored) {
@@ -38,6 +39,7 @@ const loadConfigFromStorage = (): NoticeConfig => {
  * Save config to localStorage
  */
 const saveConfigToStorage = (config: NoticeConfig): void => {
+  if (typeof window === 'undefined') return
   try {
     localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config))
   } catch (error) {
