@@ -1,6 +1,6 @@
 {
   "name": "tauri-notice-window",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "A reusable React library for cross-window notification management in Tauri v2+ applications",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -46,8 +46,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
-    "dexie": "^4.3.0",
-    "zustand": "^5.0.11",
+    "dexie": "^4.4.1",
+    "zustand": "^5.0.12",
     "zustand-sync": "^0.2.3"
   },
   "devDependencies": {
