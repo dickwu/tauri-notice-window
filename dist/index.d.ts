@@ -3,17 +3,23 @@
  * A reusable React library for cross-window notification management in Tauri v2+ applications
  */
 export type { MessageType, StoredMessage, NoticeConfig, WindowPosition } from './types/message';
+export type { StackedNotification, NoticeStackWindowOptions } from './types/stack';
 import { useMessageQueueStore, messageQueueSelectors } from './stores/messageQueueStore';
 export { useMessageQueueStore, messageQueueSelectors };
+import { useNoticeStackStore, clearNoticeStack, removeFromNoticeStack } from './stores/noticeStackStore';
+export { useNoticeStackStore, clearNoticeStack, removeFromNoticeStack, };
 export { useNoticeWindow } from './hooks/useNoticeWindow';
 export { useCloseNotice } from './hooks/useCloseNotice';
 export { useHideNotice } from './hooks/useHideNotice';
 export { useHideAllNotices } from './hooks/useHideAllNotices';
 export { useMessageQueue } from './hooks/useMessageQueue';
+export { useNoticeStack } from './hooks/useNoticeStack';
 export { NoticeLayout, useNoticeWindowContext } from './components/NoticeLayout';
 export { setNoticeConfig, getNoticeConfig } from './config/noticeConfig';
 import { initializeNoticeWindowSystem, createNoticeWindow, closeNoticeWindow, closeAllNoticeWindows, calculateWindowPosition, getLogicalScreenSize } from './utils/noticeWindow';
 export { initializeNoticeWindowSystem, createNoticeWindow, closeNoticeWindow, closeAllNoticeWindows, calculateWindowPosition, getLogicalScreenSize, };
+import { pushToNoticeStack, ensureStackWindow, closeNoticeStackWindow } from './utils/noticeStackWindow';
+export { pushToNoticeStack, ensureStackWindow, closeNoticeStackWindow, };
 import { initializeDatabase, getPendingMessages, getMessage } from './utils/db';
 export { initializeDatabase, getPendingMessages, getMessage, };
 /**

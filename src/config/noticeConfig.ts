@@ -17,6 +17,15 @@ const defaultConfig: NoticeConfig = {
   maxWidth: 600, // Max width when auto-sizing
   maxHeight: 800, // Max height when auto-sizing
   autoSizeTimeout: 3000, // Fallback show timeout if measurement fails
+  stackRoute: '/notice/stack', // Route used by shared stack window
+  stackWindowLabel: 'notice-stack', // Label for shared stack window
+  stackWindowOptions: {
+    width: 380,
+    height: 520,
+    decorations: false,
+    resizable: true,
+    alwaysOnTop: true,
+  },
 }
 
 /**

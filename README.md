@@ -581,6 +581,79 @@ export default function DevNotFound() {
 }
 ```
 
+## Stack Mode (One Window, Multiple Notices)
+
+Use stack mode when you want many incoming notices to be shown inside one shared window (instead of opening one window per message).
+
+### 1. Configure stack route and window label
+
+```typescript
+import { initializeNoticeSystem, setNoticeConfig } from 'tauri-notice-window'
+
+setNoticeConfig({
+  routePrefix: '/notices',
+  stackRoute: '/notices/stack',
+  stackWindowLabel: 'notice-stack',
+  stackWindowOptions: {
+    width: 380,
+    height: 520,
+    decorations: false,
+    resizable: true,
+    alwaysOnTop: true,
+  },
+})
+
+await initializeNoticeSystem()
+```
+
+### 2. Push notices into the shared stack window
+
+```typescript
+import { pushToNoticeStack } from 'tauri-notice-window'
+
+socket.on('message', async (message) => {
+  await pushToNoticeStack({
+    id: String(message.uuid || message.id),
+    uuid: message.uuid ? String(message.uuid) : undefined,
+    type: message.type,
+    routeType: message.type, // Optional: defaults to type
+    title: message.title,
+    data: message.data,
+  })
+})
+```
+
+### 3. Build the stack page in your app (headless ownership)
+
+Create your own UI at the configured route (for example `/notices/stack`) and use the hook:
+
+```typescript
+import { useNoticeStack } from 'tauri-notice-window'
+
+export default function NoticeStackPage() {
+  const { items, total, removeItem, clearAll, closeWindow } = useNoticeStack()
+
+  return (
+    <div>
+      <h2>Notifications ({total})</h2>
+      <button onClick={clearAll}>Clear All</button>
+      <button onClick={closeWindow}>Close</button>
+
+      {items.map((item) => (
+        <div key={item.id}>
+          <div>{item.title}</div>
+          <button onClick={() => removeItem(item.id)}>Dismiss</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+### 4. Tauri capability note
+
+If your capability already allows `notice-*`, then the default `stackWindowLabel: 'notice-stack'` is already covered.
+
 ## API Reference
 
 ### Types

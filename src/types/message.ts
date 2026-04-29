@@ -1,3 +1,5 @@
+import type { NoticeStackWindowOptions } from './stack'
+
 /**
  * Window position configuration
  */
@@ -80,5 +82,11 @@ export interface NoticeConfig {
   maxHeight?: number
   /** Fallback timeout in ms to show window if measurement fails (default: 3000) */
   autoSizeTimeout?: number
+  /** Route path for shared stack notice page (default: '/notice/stack') */
+  stackRoute?: string
+  /** Configurable stack window label (default: 'notice-stack') */
+  stackWindowLabel?: string
+  /** Shared stack notice window options */
+  stackWindowOptions?: NoticeStackWindowOptions
 }
 

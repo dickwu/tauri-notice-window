@@ -5,10 +5,21 @@
 
 // Types
 export type { MessageType, StoredMessage, NoticeConfig, WindowPosition } from './types/message'
+export type { StackedNotification, NoticeStackWindowOptions } from './types/stack'
 
 // Store
 import { useMessageQueueStore, messageQueueSelectors } from './stores/messageQueueStore'
 export { useMessageQueueStore, messageQueueSelectors }
+import {
+  useNoticeStackStore,
+  clearNoticeStack,
+  removeFromNoticeStack,
+} from './stores/noticeStackStore'
+export {
+  useNoticeStackStore,
+  clearNoticeStack,
+  removeFromNoticeStack,
+}
 
 // Hooks
 export { useNoticeWindow } from './hooks/useNoticeWindow'
@@ -16,6 +27,7 @@ export { useCloseNotice } from './hooks/useCloseNotice'
 export { useHideNotice } from './hooks/useHideNotice'
 export { useHideAllNotices } from './hooks/useHideAllNotices'
 export { useMessageQueue } from './hooks/useMessageQueue'
+export { useNoticeStack } from './hooks/useNoticeStack'
 
 // Components
 export { NoticeLayout, useNoticeWindowContext } from './components/NoticeLayout'
@@ -39,6 +51,16 @@ export {
   closeAllNoticeWindows,
   calculateWindowPosition,
   getLogicalScreenSize,
+}
+import {
+  pushToNoticeStack,
+  ensureStackWindow,
+  closeNoticeStackWindow,
+} from './utils/noticeStackWindow'
+export {
+  pushToNoticeStack,
+  ensureStackWindow,
+  closeNoticeStackWindow,
 }
 
 import { 

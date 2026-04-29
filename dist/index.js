@@ -1,9 +1,9 @@
-import { create as ve } from "zustand";
-import { syncTabs as Se } from "zustand-sync";
-import We from "dexie";
-import { useCallback as H, createContext as ze, useContext as Ae, useState as E, useRef as ie, useEffect as P } from "react";
-import { jsx as C } from "react/jsx-runtime";
-const ce = "tauri-notice-config", G = {
+import { create as ye } from "zustand";
+import { syncTabs as be } from "zustand-sync";
+import Ne from "dexie";
+import { useCallback as D, useState as C, useEffect as I, createContext as ke, useContext as xe, useRef as re } from "react";
+import { jsx as L } from "react/jsx-runtime";
+const pe = "tauri-notice-config", j = {
   routePrefix: "/notice",
   databaseName: "tauri-notice-db",
   defaultWidth: 400,
@@ -20,30 +20,41 @@ const ce = "tauri-notice-config", G = {
   // Max width when auto-sizing
   maxHeight: 800,
   // Max height when auto-sizing
-  autoSizeTimeout: 3e3
+  autoSizeTimeout: 3e3,
   // Fallback show timeout if measurement fails
-}, de = () => {
-  if (typeof window > "u") return G;
+  stackRoute: "/notice/stack",
+  // Route used by shared stack window
+  stackWindowLabel: "notice-stack",
+  // Label for shared stack window
+  stackWindowOptions: {
+    width: 380,
+    height: 520,
+    decorations: !1,
+    resizable: !0,
+    alwaysOnTop: !0
+  }
+}, fe = () => {
+  if (typeof window > "u") return j;
   try {
-    const t = localStorage.getItem(ce);
+    const t = localStorage.getItem(pe);
     if (t)
-      return { ...G, ...JSON.parse(t) };
+      return { ...j, ...JSON.parse(t) };
   } catch (t) {
     console.warn("Failed to load config from localStorage:", t);
   }
-  return G;
-}, Ne = (t) => {
+  return j;
+}, De = (t) => {
   if (!(typeof window > "u"))
     try {
-      localStorage.setItem(ce, JSON.stringify(t));
+      localStorage.setItem(pe, JSON.stringify(t));
     } catch (e) {
       console.warn("Failed to save config to localStorage:", e);
     }
-}, at = (t) => {
-  const i = { ...de(), ...t };
-  Ne(i);
-}, T = () => de();
-class xe extends We {
+}, yt = (t) => {
+  const i = { ...fe(), ...t };
+  De(i);
+}, S = () => fe();
+class Oe extends Ne {
   messages;
   constructor(e) {
     super(e), this.version(1).stores({
@@ -51,14 +62,14 @@ class xe extends We {
     });
   }
 }
-let k = null;
-const we = () => {
-  if (!k) {
-    const t = T();
-    k = new xe(t.databaseName);
+let R = null;
+const me = () => {
+  if (!R) {
+    const t = S();
+    R = new Oe(t.databaseName);
   }
-  return k;
-}, f = () => k || we(), De = async (t) => {
+  return R;
+}, m = () => R || me(), Ie = async (t) => {
   const e = {
     ...t,
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -67,31 +78,31 @@ const we = () => {
     queueStatus: "pending",
     queuePosition: 0
   };
-  await f().messages.put(e);
-}, Me = async (t) => !!await f().messages.get(t), Oe = async (t) => {
-  const e = await f().messages.get(t);
+  await m().messages.put(e);
+}, Me = async (t) => !!await m().messages.get(t), Te = async (t) => {
+  const e = await m().messages.get(t);
   return e?.isShown === !0 || e?.queueStatus === "shown";
-}, Ie = async () => await f().messages.where("queueStatus").equals("pending").sortBy("queuePosition"), Pe = async (t, e) => {
-  await f().messages.update(t, { queueStatus: e });
+}, Pe = async () => await m().messages.where("queueStatus").equals("pending").sortBy("queuePosition"), Le = async (t, e) => {
+  await m().messages.update(t, { queueStatus: e });
 }, Ce = async (t) => {
-  await f().messages.update(t, {
+  await m().messages.update(t, {
     queueStatus: "shown",
     isShown: !0
   });
-}, ke = async (t) => {
-  await f().messages.update(t, {
+}, Re = async (t) => {
+  await m().messages.update(t, {
     queueStatus: "hidden"
   });
-}, he = async (t) => await f().messages.get(t), Le = async (t) => {
-  await f().messages.delete(t);
-}, Te = async () => {
-  await f().messages.where("queueStatus").anyOf(["pending", "showing"]).delete();
-}, Re = async (t) => {
+}, _e = async (t) => await m().messages.get(t), Ee = async (t) => {
+  await m().messages.delete(t);
+}, Fe = async () => {
+  await m().messages.where("queueStatus").anyOf(["pending", "showing"]).delete();
+}, qe = async (t) => {
   const e = t.map(
-    (i) => f().messages.update(i.id, { queuePosition: i.position })
+    (i) => m().messages.update(i.id, { queuePosition: i.position })
   );
   await Promise.all(e);
-}, Ee = (t, e) => ({
+}, Be = (t, e) => ({
   // Initial state
   queue: [],
   currentMessage: null,
@@ -101,13 +112,13 @@ const we = () => {
   // Enqueue a new message
   enqueue: async (i) => {
     const n = e();
-    if (await Oe(i.id)) {
+    if (await Te(i.id)) {
       console.log(`Message ${i.id} was already shown, skipping`);
       return;
     }
-    if (await Me(i.id) || await De(i), !n.queue.some((g) => g.id === i.id)) {
-      const g = [...n.queue, i];
-      t({ queue: g }), await e().persistQueue();
+    if (await Me(i.id) || await Ie(i), !n.queue.some((w) => w.id === i.id)) {
+      const w = [...n.queue, i];
+      t({ queue: w }), await e().persistQueue();
     }
     !n.isProcessing && !n.currentMessage && await e().showNext();
   },
@@ -126,14 +137,14 @@ const we = () => {
       t({ isProcessing: !1, currentMessage: null });
       return;
     }
-    if (!await he(n.id)) {
+    if (!await _e(n.id)) {
       console.log(`Message ${n.id} was deleted, skipping to next`), await e().showNext();
       return;
     }
     t({
       currentMessage: n,
       isProcessing: !0
-    }), await Pe(n.id, "showing"), await e().persistQueue();
+    }), await Le(n.id, "showing"), await e().persistQueue();
   },
   // Clear current message and show next
   clearCurrent: () => {
@@ -158,16 +169,16 @@ const we = () => {
   initializeFromDatabase: async () => {
     if (e().initialized) return;
     t({ initialized: !0 });
-    const n = await Ie();
+    const n = await Pe();
     n.length > 0 && (t({ queue: n }), await e().showNext());
   },
   // Persist queue to database
   persistQueue: async () => {
-    const n = e().queue.map((a, l) => ({
+    const n = e().queue.map((a, r) => ({
       id: a.id,
-      position: l
+      position: r
     }));
-    await Re(n);
+    await qe(n);
   },
   // Clear all messages on logout
   clearOnLogout: async () => {
@@ -177,20 +188,20 @@ const we = () => {
       isProcessing: !1,
       activeWindowIds: [],
       initialized: !1
-    }), await Te();
+    }), await Fe();
   },
   // Remove a specific message from the queue by ID (memory only)
   removeFromQueue: async (i) => {
-    const n = e(), a = n.queue.filter((l) => l.id !== i);
+    const n = e(), a = n.queue.filter((r) => r.id !== i);
     t({ queue: a }), await e().persistQueue(), n.currentMessage?.id === i && e().clearCurrent();
   },
   // Delete message completely (from both memory and database)
   deleteMessage: async (i) => {
-    await Le(i), await e().removeFromQueue(i);
+    await Ee(i), await e().removeFromQueue(i);
   },
   // Hide a message (mark as hidden and remove from queue)
   hideMessage: async (i) => {
-    await ke(i), await e().removeFromQueue(i);
+    await Re(i), await e().removeFromQueue(i);
   },
   // Mark message as shown in database
   markMessageAsShown: async (i) => {
@@ -205,7 +216,7 @@ const we = () => {
   removeActiveWindow: (i) => {
     const n = e(), a = String(i);
     t({
-      activeWindowIds: n.activeWindowIds.filter((l) => l !== a)
+      activeWindowIds: n.activeWindowIds.filter((r) => r !== a)
     });
   },
   // Check if window is active
@@ -213,46 +224,71 @@ const we = () => {
     const n = e(), a = String(i);
     return n.activeWindowIds.includes(a);
   }
-}), d = ve()(
-  Se(Ee, {
+}), g = ye()(
+  be(Be, {
     name: "tauri-notice-queue"
   })
-), F = {
+), B = {
   queueLength: (t) => t.queue.length,
   currentMessage: (t) => t.currentMessage,
   isProcessing: (t) => t.isProcessing,
   queue: (t) => t.queue
-}, rt = () => {
-  const t = d((i) => i.enqueue);
-  return { showNotice: H(
+}, $e = (t) => ({
+  items: [],
+  addItem: (e) => {
+    t((i) => {
+      const n = String(e.id), a = i.items.filter((r) => r.id !== n);
+      return a.push({ ...e, id: n }), { items: a };
+    });
+  },
+  removeItem: (e) => {
+    const i = String(e);
+    t((n) => ({
+      items: n.items.filter((a) => a.id !== i)
+    }));
+  },
+  clearAll: () => {
+    t({ items: [] });
+  }
+}), U = ye()(
+  be($e, {
+    name: "tauri-notice-stack"
+  })
+), He = () => {
+  U.getState().clearAll();
+}, Ue = (t) => {
+  U.getState().removeItem(t);
+}, bt = () => {
+  const t = g((i) => i.enqueue);
+  return { showNotice: D(
     async (i) => {
       await t(i);
     },
     [t]
   ) };
 };
-function Fe(t, e, i, n) {
+function Ge(t, e, i, n) {
   if (typeof e == "function" ? t !== e || !n : !e.has(t)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
   return i === "m" ? n : i === "a" ? n.call(t) : n ? n.value : e.get(t);
 }
-function qe(t, e, i, n, a) {
+function Qe(t, e, i, n, a) {
   if (typeof e == "function" ? t !== e || !0 : !e.has(t)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
   return e.set(t, i), i;
 }
-var q;
-const p = "__TAURI_TO_IPC_KEY__";
-function Be(t, e = !1) {
+var $;
+const f = "__TAURI_TO_IPC_KEY__";
+function je(t, e = !1) {
   return window.__TAURI_INTERNALS__.transformCallback(t, e);
 }
 async function s(t, e = {}, i) {
   return window.__TAURI_INTERNALS__.invoke(t, e, i);
 }
-class He {
+class Ve {
   get rid() {
-    return Fe(this, q, "f");
+    return Ge(this, $, "f");
   }
   constructor(e) {
-    q.set(this, void 0), qe(this, q, e);
+    $.set(this, void 0), Qe(this, $, e);
   }
   /**
    * Destroys and cleans up this resource from memory.
@@ -264,8 +300,8 @@ class He {
     });
   }
 }
-q = /* @__PURE__ */ new WeakMap();
-class Z {
+$ = /* @__PURE__ */ new WeakMap();
+class K {
   constructor(...e) {
     this.type = "Logical", e.length === 1 ? "Logical" in e[0] ? (this.width = e[0].Logical.width, this.height = e[0].Logical.height) : (this.width = e[0].width, this.height = e[0].height) : (this.width = e[0], this.height = e[1]);
   }
@@ -285,19 +321,19 @@ class Z {
    * @since 2.0.0
    */
   toPhysical(e) {
-    return new W(this.width * e, this.height * e);
+    return new N(this.width * e, this.height * e);
   }
-  [p]() {
+  [f]() {
     return {
       width: this.width,
       height: this.height
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-class W {
+class N {
   constructor(...e) {
     this.type = "Physical", e.length === 1 ? "Physical" in e[0] ? (this.width = e[0].Physical.width, this.height = e[0].Physical.height) : (this.width = e[0].width, this.height = e[0].height) : (this.width = e[0], this.height = e[1]);
   }
@@ -313,29 +349,29 @@ class W {
    * ```
    */
   toLogical(e) {
-    return new Z(this.width / e, this.height / e);
+    return new K(this.width / e, this.height / e);
   }
-  [p]() {
+  [f]() {
     return {
       width: this.width,
       height: this.height
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-class S {
+class A {
   constructor(e) {
     this.size = e;
   }
   toLogical(e) {
-    return this.size instanceof Z ? this.size : this.size.toLogical(e);
+    return this.size instanceof K ? this.size : this.size.toLogical(e);
   }
   toPhysical(e) {
-    return this.size instanceof W ? this.size : this.size.toPhysical(e);
+    return this.size instanceof N ? this.size : this.size.toPhysical(e);
   }
-  [p]() {
+  [f]() {
     return {
       [`${this.size.type}`]: {
         width: this.size.width,
@@ -344,10 +380,10 @@ class S {
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-class Y {
+class X {
   constructor(...e) {
     this.type = "Logical", e.length === 1 ? "Logical" in e[0] ? (this.x = e[0].Logical.x, this.y = e[0].Logical.y) : (this.x = e[0].x, this.y = e[0].y) : (this.x = e[0], this.y = e[1]);
   }
@@ -367,19 +403,19 @@ class Y {
    * @since 2.0.0
    */
   toPhysical(e) {
-    return new h(this.x * e, this.y * e);
+    return new b(this.x * e, this.y * e);
   }
-  [p]() {
+  [f]() {
     return {
       x: this.x,
       y: this.y
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-class h {
+class b {
   constructor(...e) {
     this.type = "Physical", e.length === 1 ? "Physical" in e[0] ? (this.x = e[0].Physical.x, this.y = e[0].Physical.y) : (this.x = e[0].x, this.y = e[0].y) : (this.x = e[0], this.y = e[1]);
   }
@@ -399,29 +435,29 @@ class h {
    * @since 2.0.0
    */
   toLogical(e) {
-    return new Y(this.x / e, this.y / e);
+    return new X(this.x / e, this.y / e);
   }
-  [p]() {
+  [f]() {
     return {
       x: this.x,
       y: this.y
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-class x {
+class M {
   constructor(e) {
     this.position = e;
   }
   toLogical(e) {
-    return this.position instanceof Y ? this.position : this.position.toLogical(e);
+    return this.position instanceof X ? this.position : this.position.toLogical(e);
   }
   toPhysical(e) {
-    return this.position instanceof h ? this.position : this.position.toPhysical(e);
+    return this.position instanceof b ? this.position : this.position.toPhysical(e);
   }
-  [p]() {
+  [f]() {
     return {
       [`${this.position.type}`]: {
         x: this.position.x,
@@ -430,47 +466,57 @@ class x {
     };
   }
   toJSON() {
-    return this[p]();
+    return this[f]();
   }
 }
-var c;
+var d;
 (function(t) {
   t.WINDOW_RESIZED = "tauri://resize", t.WINDOW_MOVED = "tauri://move", t.WINDOW_CLOSE_REQUESTED = "tauri://close-requested", t.WINDOW_DESTROYED = "tauri://destroyed", t.WINDOW_FOCUS = "tauri://focus", t.WINDOW_BLUR = "tauri://blur", t.WINDOW_SCALE_FACTOR_CHANGED = "tauri://scale-change", t.WINDOW_THEME_CHANGED = "tauri://theme-changed", t.WINDOW_CREATED = "tauri://window-created", t.WEBVIEW_CREATED = "tauri://webview-created", t.DRAG_ENTER = "tauri://drag-enter", t.DRAG_OVER = "tauri://drag-over", t.DRAG_DROP = "tauri://drag-drop", t.DRAG_LEAVE = "tauri://drag-leave";
-})(c || (c = {}));
-async function ge(t, e) {
+})(d || (d = {}));
+async function ve(t, e) {
   window.__TAURI_EVENT_PLUGIN_INTERNALS__.unregisterListener(t, e), await s("plugin:event|unlisten", {
     event: t,
     eventId: e
   });
 }
-async function $(t, e, i) {
+async function q(t, e, i) {
   var n;
   const a = typeof i?.target == "string" ? { kind: "AnyLabel", label: i.target } : (n = i?.target) !== null && n !== void 0 ? n : { kind: "Any" };
   return s("plugin:event|listen", {
     event: t,
     target: a,
-    handler: Be(e)
-  }).then((l) => async () => ge(t, l));
+    handler: je(e)
+  }).then((r) => async () => ve(t, r));
 }
-async function K(t, e, i) {
-  return $(t, (n) => {
-    ge(t, n.id), e(n);
+async function G(t, e, i) {
+  return q(t, (n) => {
+    ve(t, n.id), e(n);
   }, i);
 }
-async function ye(t, e) {
+async function ee(t, e) {
   await s("plugin:event|emit", {
     event: t,
     payload: e
   });
 }
-async function be(t, e, i) {
+async function te(t, e, i) {
   await s("plugin:event|emit_to", {
     target: typeof t == "string" ? { kind: "AnyLabel", label: t } : t,
     event: e,
     payload: i
   });
 }
-class L extends He {
+const Se = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  get TauriEvent() {
+    return d;
+  },
+  emit: ee,
+  emitTo: te,
+  listen: q,
+  once: G
+}, Symbol.toStringTag, { value: "Module" }));
+class E extends Ve {
   /**
    * Creates an Image from a resource ID. For internal use only.
    *
@@ -482,10 +528,10 @@ class L extends He {
   /** Creates a new Image using RGBA data, in row-major order from top to bottom, and with specified width and height. */
   static async new(e, i, n) {
     return s("plugin:image|new", {
-      rgba: B(e),
+      rgba: H(e),
       width: i,
       height: n
-    }).then((a) => new L(a));
+    }).then((a) => new E(a));
   }
   /**
    * Creates a new image using the provided bytes by inferring the file format.
@@ -502,8 +548,8 @@ class L extends He {
    */
   static async fromBytes(e) {
     return s("plugin:image|from_bytes", {
-      bytes: B(e)
-    }).then((i) => new L(i));
+      bytes: H(e)
+    }).then((i) => new E(i));
   }
   /**
    * Creates a new image using the provided path.
@@ -518,7 +564,7 @@ class L extends He {
    * ```
    */
   static async fromPath(e) {
-    return s("plugin:image|from_path", { path: e }).then((i) => new L(i));
+    return s("plugin:image|from_path", { path: e }).then((i) => new E(i));
   }
   /** Returns the RGBA data for this image, in row-major order from top to bottom.  */
   async rgba() {
@@ -531,14 +577,14 @@ class L extends He {
     return s("plugin:image|size", { rid: this.rid });
   }
 }
-function B(t) {
-  return t == null ? null : typeof t == "string" ? t : t instanceof L ? t.rid : t;
+function H(t) {
+  return t == null ? null : typeof t == "string" ? t : t instanceof E ? t.rid : t;
 }
-var J;
+var Y;
 (function(t) {
   t[t.Critical = 1] = "Critical", t[t.Informational = 2] = "Informational";
-})(J || (J = {}));
-class $e {
+})(Y || (Y = {}));
+class Je {
   constructor(e) {
     this._preventDefault = !1, this.event = e.event, this.id = e.id;
   }
@@ -549,24 +595,24 @@ class $e {
     return this._preventDefault;
   }
 }
-var ne;
+var le;
 (function(t) {
   t.None = "none", t.Normal = "normal", t.Indeterminate = "indeterminate", t.Paused = "paused", t.Error = "error";
-})(ne || (ne = {}));
-function pe() {
-  return new U(window.__TAURI_INTERNALS__.metadata.currentWindow.label, {
+})(le || (le = {}));
+function We() {
+  return new Q(window.__TAURI_INTERNALS__.metadata.currentWindow.label, {
     // @ts-expect-error `skip` is not defined in the public API but it is handled by the constructor
     skip: !0
   });
 }
-async function Q() {
-  return s("plugin:window|get_all_windows").then((t) => t.map((e) => new U(e, {
+async function V() {
+  return s("plugin:window|get_all_windows").then((t) => t.map((e) => new Q(e, {
     // @ts-expect-error `skip` is not defined in the public API but it is handled by the constructor
     skip: !0
   })));
 }
-const V = ["tauri://created", "tauri://error"];
-class U {
+const J = ["tauri://created", "tauri://error"];
+class Q {
   /**
    * Creates a new Window.
    * @example
@@ -607,19 +653,19 @@ class U {
    */
   static async getByLabel(e) {
     var i;
-    return (i = (await Q()).find((n) => n.label === e)) !== null && i !== void 0 ? i : null;
+    return (i = (await V()).find((n) => n.label === e)) !== null && i !== void 0 ? i : null;
   }
   /**
    * Get an instance of `Window` for the current window.
    */
   static getCurrent() {
-    return pe();
+    return We();
   }
   /**
    * Gets a list of instances of `Window` for all available windows.
    */
   static async getAll() {
-    return Q();
+    return V();
   }
   /**
    *  Gets the focused window.
@@ -632,7 +678,7 @@ class U {
    * @returns The Window instance or `undefined` if there is not any focused window.
    */
   static async getFocusedWindow() {
-    for (const e of await Q())
+    for (const e of await V())
       if (await e.isFocused())
         return e;
     return null;
@@ -660,7 +706,7 @@ class U {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : $(e, i, {
+    } : q(e, i, {
       target: { kind: "Window", label: this.label }
     });
   }
@@ -687,7 +733,7 @@ class U {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : K(e, i, {
+    } : G(e, i, {
       target: { kind: "Window", label: this.label }
     });
   }
@@ -703,7 +749,7 @@ class U {
    * @param payload Event payload.
    */
   async emit(e, i) {
-    if (V.includes(e)) {
+    if (J.includes(e)) {
       for (const n of this.listeners[e] || [])
         n({
           event: e,
@@ -712,7 +758,7 @@ class U {
         });
       return;
     }
-    return ye(e, i);
+    return ee(e, i);
   }
   /**
    * Emits an event to all {@link EventTarget|targets} matching the given target.
@@ -727,7 +773,7 @@ class U {
    * @param payload Event payload.
    */
   async emitTo(e, i, n) {
-    if (V.includes(i)) {
+    if (J.includes(i)) {
       for (const a of this.listeners[i] || [])
         a({
           event: i,
@@ -736,11 +782,11 @@ class U {
         });
       return;
     }
-    return be(e, i, n);
+    return te(e, i, n);
   }
   /** @ignore */
   _handleTauriEvent(e, i) {
-    return V.includes(e) ? (e in this.listeners ? this.listeners[e].push(i) : this.listeners[e] = [i], !0) : !1;
+    return J.includes(e) ? (e in this.listeners ? this.listeners[e].push(i) : this.listeners[e] = [i], !0) : !1;
   }
   // Getters
   /**
@@ -771,7 +817,7 @@ class U {
   async innerPosition() {
     return s("plugin:window|inner_position", {
       label: this.label
-    }).then((e) => new h(e));
+    }).then((e) => new b(e));
   }
   /**
    * The position of the top-left hand corner of the window relative to the top-left hand corner of the desktop.
@@ -786,7 +832,7 @@ class U {
   async outerPosition() {
     return s("plugin:window|outer_position", {
       label: this.label
-    }).then((e) => new h(e));
+    }).then((e) => new b(e));
   }
   /**
    * The physical size of the window's client area.
@@ -802,7 +848,7 @@ class U {
   async innerSize() {
     return s("plugin:window|inner_size", {
       label: this.label
-    }).then((e) => new W(e));
+    }).then((e) => new N(e));
   }
   /**
    * The physical size of the entire window.
@@ -818,7 +864,7 @@ class U {
   async outerSize() {
     return s("plugin:window|outer_size", {
       label: this.label
-    }).then((e) => new W(e));
+    }).then((e) => new N(e));
   }
   /**
    * Gets the window's current fullscreen state.
@@ -1069,7 +1115,7 @@ class U {
    */
   async requestUserAttention(e) {
     let i = null;
-    return e && (e === J.Critical ? i = { type: "Critical" } : i = { type: "Informational" }), s("plugin:window|request_user_attention", {
+    return e && (e === Y.Critical ? i = { type: "Critical" } : i = { type: "Informational" }), s("plugin:window|request_user_attention", {
       label: this.label,
       value: i
     });
@@ -1469,7 +1515,7 @@ class U {
   async setSize(e) {
     return s("plugin:window|set_size", {
       label: this.label,
-      value: e instanceof S ? e : new S(e)
+      value: e instanceof A ? e : new A(e)
     });
   }
   /**
@@ -1486,7 +1532,7 @@ class U {
   async setMinSize(e) {
     return s("plugin:window|set_min_size", {
       label: this.label,
-      value: e instanceof S ? e : e ? new S(e) : null
+      value: e instanceof A ? e : e ? new A(e) : null
     });
   }
   /**
@@ -1503,7 +1549,7 @@ class U {
   async setMaxSize(e) {
     return s("plugin:window|set_max_size", {
       label: this.label,
-      value: e instanceof S ? e : e ? new S(e) : null
+      value: e instanceof A ? e : e ? new A(e) : null
     });
   }
   /**
@@ -1545,7 +1591,7 @@ class U {
   async setPosition(e) {
     return s("plugin:window|set_position", {
       label: this.label,
-      value: e instanceof x ? e : new x(e)
+      value: e instanceof M ? e : new M(e)
     });
   }
   /**
@@ -1639,7 +1685,7 @@ class U {
   async setIcon(e) {
     return s("plugin:window|set_icon", {
       label: this.label,
-      value: B(e)
+      value: H(e)
     });
   }
   /**
@@ -1757,7 +1803,7 @@ class U {
   async setCursorPosition(e) {
     return s("plugin:window|set_cursor_position", {
       label: this.label,
-      value: e instanceof x ? e : new x(e)
+      value: e instanceof M ? e : new M(e)
     });
   }
   /**
@@ -1874,7 +1920,7 @@ class U {
   async setOverlayIcon(e) {
     return s("plugin:window|set_overlay_icon", {
       label: this.label,
-      value: e ? B(e) : void 0
+      value: e ? H(e) : void 0
     });
   }
   /**
@@ -1963,8 +2009,8 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onResized(e) {
-    return this.listen(c.WINDOW_RESIZED, (i) => {
-      i.payload = new W(i.payload), e(i);
+    return this.listen(d.WINDOW_RESIZED, (i) => {
+      i.payload = new N(i.payload), e(i);
     });
   }
   /**
@@ -1985,8 +2031,8 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onMoved(e) {
-    return this.listen(c.WINDOW_MOVED, (i) => {
-      i.payload = new h(i.payload), e(i);
+    return this.listen(d.WINDOW_MOVED, (i) => {
+      i.payload = new b(i.payload), e(i);
     });
   }
   /**
@@ -2012,8 +2058,8 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onCloseRequested(e) {
-    return this.listen(c.WINDOW_CLOSE_REQUESTED, async (i) => {
-      const n = new $e(i);
+    return this.listen(d.WINDOW_CLOSE_REQUESTED, async (i) => {
+      const n = new Je(i);
       await e(n), n.isPreventDefault() || await this.destroy();
     });
   }
@@ -2043,37 +2089,37 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onDragDropEvent(e) {
-    const i = await this.listen(c.DRAG_ENTER, (r) => {
+    const i = await this.listen(d.DRAG_ENTER, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "enter",
-          paths: r.payload.paths,
-          position: new h(r.payload.position)
+          paths: o.payload.paths,
+          position: new b(o.payload.position)
         }
       });
-    }), n = await this.listen(c.DRAG_OVER, (r) => {
+    }), n = await this.listen(d.DRAG_OVER, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "over",
-          position: new h(r.payload.position)
+          position: new b(o.payload.position)
         }
       });
-    }), a = await this.listen(c.DRAG_DROP, (r) => {
+    }), a = await this.listen(d.DRAG_DROP, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "drop",
-          paths: r.payload.paths,
-          position: new h(r.payload.position)
+          paths: o.payload.paths,
+          position: new b(o.payload.position)
         }
       });
-    }), l = await this.listen(c.DRAG_LEAVE, (r) => {
-      e({ ...r, payload: { type: "leave" } });
+    }), r = await this.listen(d.DRAG_LEAVE, (o) => {
+      e({ ...o, payload: { type: "leave" } });
     });
     return () => {
-      i(), a(), n(), l();
+      i(), a(), n(), r();
     };
   }
   /**
@@ -2094,9 +2140,9 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onFocusChanged(e) {
-    const i = await this.listen(c.WINDOW_FOCUS, (a) => {
+    const i = await this.listen(d.WINDOW_FOCUS, (a) => {
       e({ ...a, payload: !0 });
-    }), n = await this.listen(c.WINDOW_BLUR, (a) => {
+    }), n = await this.listen(d.WINDOW_BLUR, (a) => {
       e({ ...a, payload: !1 });
     });
     return () => {
@@ -2125,7 +2171,7 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onScaleChanged(e) {
-    return this.listen(c.WINDOW_SCALE_FACTOR_CHANGED, e);
+    return this.listen(d.WINDOW_SCALE_FACTOR_CHANGED, e);
   }
   /**
    * Listen to the system theme change.
@@ -2145,48 +2191,48 @@ class U {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onThemeChanged(e) {
-    return this.listen(c.WINDOW_THEME_CHANGED, e);
+    return this.listen(d.WINDOW_THEME_CHANGED, e);
   }
 }
-var se;
+var ce;
 (function(t) {
   t.Disabled = "disabled", t.Throttle = "throttle", t.Suspend = "suspend";
-})(se || (se = {}));
-var ae;
+})(ce || (ce = {}));
+var ue;
 (function(t) {
   t.Default = "default", t.FluentOverlay = "fluentOverlay";
-})(ae || (ae = {}));
-var re;
+})(ue || (ue = {}));
+var de;
 (function(t) {
   t.AppearanceBased = "appearanceBased", t.Light = "light", t.Dark = "dark", t.MediumLight = "mediumLight", t.UltraDark = "ultraDark", t.Titlebar = "titlebar", t.Selection = "selection", t.Menu = "menu", t.Popover = "popover", t.Sidebar = "sidebar", t.HeaderView = "headerView", t.Sheet = "sheet", t.WindowBackground = "windowBackground", t.HudWindow = "hudWindow", t.FullScreenUI = "fullScreenUI", t.Tooltip = "tooltip", t.ContentBackground = "contentBackground", t.UnderWindowBackground = "underWindowBackground", t.UnderPageBackground = "underPageBackground", t.Mica = "mica", t.Blur = "blur", t.Acrylic = "acrylic", t.Tabbed = "tabbed", t.TabbedDark = "tabbedDark", t.TabbedLight = "tabbedLight";
-})(re || (re = {}));
-var oe;
+})(de || (de = {}));
+var we;
 (function(t) {
   t.FollowsWindowActiveState = "followsWindowActiveState", t.Active = "active", t.Inactive = "inactive";
-})(oe || (oe = {}));
-function Ue(t) {
+})(we || (we = {}));
+function Ze(t) {
   return t === null ? null : {
     name: t.name,
     scaleFactor: t.scaleFactor,
-    position: new h(t.position),
-    size: new W(t.size),
+    position: new b(t.position),
+    size: new N(t.size),
     workArea: {
-      position: new h(t.workArea.position),
-      size: new W(t.workArea.size)
+      position: new b(t.workArea.position),
+      size: new N(t.workArea.size)
     }
   };
 }
-async function Ge() {
-  return s("plugin:window|primary_monitor").then(Ue);
+async function Ye() {
+  return s("plugin:window|primary_monitor").then(Ze);
 }
-function fe() {
-  return new X(pe(), window.__TAURI_INTERNALS__.metadata.currentWebview.label, {
+function ze() {
+  return new ie(We(), window.__TAURI_INTERNALS__.metadata.currentWebview.label, {
     // @ts-expect-error `skip` is not defined in the public API but it is handled by the constructor
     skip: !0
   });
 }
-async function le() {
-  return s("plugin:webview|get_all_webviews").then((t) => t.map((e) => new X(new U(e.windowLabel, {
+async function he() {
+  return s("plugin:webview|get_all_webviews").then((t) => t.map((e) => new ie(new Q(e.windowLabel, {
     // @ts-expect-error `skip` is not defined in the public API but it is handled by the constructor
     skip: !0
   }), e.label, {
@@ -2194,8 +2240,8 @@ async function le() {
     skip: !0
   })));
 }
-const j = ["tauri://created", "tauri://error"];
-class X {
+const Z = ["tauri://created", "tauri://error"];
+class ie {
   /**
    * Creates a new Webview.
    * @example
@@ -2250,19 +2296,19 @@ class X {
    */
   static async getByLabel(e) {
     var i;
-    return (i = (await le()).find((n) => n.label === e)) !== null && i !== void 0 ? i : null;
+    return (i = (await he()).find((n) => n.label === e)) !== null && i !== void 0 ? i : null;
   }
   /**
    * Get an instance of `Webview` for the current webview.
    */
   static getCurrent() {
-    return fe();
+    return ze();
   }
   /**
    * Gets a list of instances of `Webview` for all available webviews.
    */
   static async getAll() {
-    return le();
+    return he();
   }
   /**
    * Listen to an emitted event on this webview.
@@ -2287,7 +2333,7 @@ class X {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : $(e, i, {
+    } : q(e, i, {
       target: { kind: "Webview", label: this.label }
     });
   }
@@ -2314,7 +2360,7 @@ class X {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : K(e, i, {
+    } : G(e, i, {
       target: { kind: "Webview", label: this.label }
     });
   }
@@ -2331,7 +2377,7 @@ class X {
    * @param payload Event payload.
    */
   async emit(e, i) {
-    if (j.includes(e)) {
+    if (Z.includes(e)) {
       for (const n of this.listeners[e] || [])
         n({
           event: e,
@@ -2340,7 +2386,7 @@ class X {
         });
       return;
     }
-    return ye(e, i);
+    return ee(e, i);
   }
   /**
    * Emits an event to all {@link EventTarget|targets} matching the given target.
@@ -2356,7 +2402,7 @@ class X {
    * @param payload Event payload.
    */
   async emitTo(e, i, n) {
-    if (j.includes(i)) {
+    if (Z.includes(i)) {
       for (const a of this.listeners[i] || [])
         a({
           event: i,
@@ -2365,11 +2411,11 @@ class X {
         });
       return;
     }
-    return be(e, i, n);
+    return te(e, i, n);
   }
   /** @ignore */
   _handleTauriEvent(e, i) {
-    return j.includes(e) ? (e in this.listeners ? this.listeners[e].push(i) : this.listeners[e] = [i], !0) : !1;
+    return Z.includes(e) ? (e in this.listeners ? this.listeners[e].push(i) : this.listeners[e] = [i], !0) : !1;
   }
   // Getters
   /**
@@ -2385,7 +2431,7 @@ class X {
   async position() {
     return s("plugin:webview|webview_position", {
       label: this.label
-    }).then((e) => new h(e));
+    }).then((e) => new b(e));
   }
   /**
    * The physical size of the webview's client area.
@@ -2401,7 +2447,7 @@ class X {
   async size() {
     return s("plugin:webview|webview_size", {
       label: this.label
-    }).then((e) => new W(e));
+    }).then((e) => new N(e));
   }
   // Setters
   /**
@@ -2433,7 +2479,7 @@ class X {
   async setSize(e) {
     return s("plugin:webview|set_webview_size", {
       label: this.label,
-      value: e instanceof S ? e : new S(e)
+      value: e instanceof A ? e : new A(e)
     });
   }
   /**
@@ -2450,7 +2496,7 @@ class X {
   async setPosition(e) {
     return s("plugin:webview|set_webview_position", {
       label: this.label,
-      value: e instanceof x ? e : new x(e)
+      value: e instanceof M ? e : new M(e)
     });
   }
   /**
@@ -2606,51 +2652,51 @@ class X {
    * Note that removing the listener is required if your listener goes out of scope e.g. the component is unmounted.
    */
   async onDragDropEvent(e) {
-    const i = await this.listen(c.DRAG_ENTER, (r) => {
+    const i = await this.listen(d.DRAG_ENTER, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "enter",
-          paths: r.payload.paths,
-          position: new h(r.payload.position)
+          paths: o.payload.paths,
+          position: new b(o.payload.position)
         }
       });
-    }), n = await this.listen(c.DRAG_OVER, (r) => {
+    }), n = await this.listen(d.DRAG_OVER, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "over",
-          position: new h(r.payload.position)
+          position: new b(o.payload.position)
         }
       });
-    }), a = await this.listen(c.DRAG_DROP, (r) => {
+    }), a = await this.listen(d.DRAG_DROP, (o) => {
       e({
-        ...r,
+        ...o,
         payload: {
           type: "drop",
-          paths: r.payload.paths,
-          position: new h(r.payload.position)
+          paths: o.payload.paths,
+          position: new b(o.payload.position)
         }
       });
-    }), l = await this.listen(c.DRAG_LEAVE, (r) => {
-      e({ ...r, payload: { type: "leave" } });
+    }), r = await this.listen(d.DRAG_LEAVE, (o) => {
+      e({ ...o, payload: { type: "leave" } });
     });
     return () => {
-      i(), a(), n(), l();
+      i(), a(), n(), r();
     };
   }
 }
-function A() {
-  const t = fe();
-  return new D(t.label, { skip: !0 });
+function x() {
+  const t = ze();
+  return new W(t.label, { skip: !0 });
 }
-async function ue() {
-  return s("plugin:window|get_all_windows").then((t) => t.map((e) => new D(e, {
+async function ge() {
+  return s("plugin:window|get_all_windows").then((t) => t.map((e) => new W(e, {
     // @ts-expect-error `skip` is not defined in the public API but it is handled by the constructor
     skip: !0
   })));
 }
-class D {
+class W {
   /**
    * Creates a new {@link Window} hosting a {@link Webview}.
    * @example
@@ -2693,20 +2739,20 @@ class D {
    */
   static async getByLabel(e) {
     var i;
-    const n = (i = (await ue()).find((a) => a.label === e)) !== null && i !== void 0 ? i : null;
-    return n ? new D(n.label, { skip: !0 }) : null;
+    const n = (i = (await ge()).find((a) => a.label === e)) !== null && i !== void 0 ? i : null;
+    return n ? new W(n.label, { skip: !0 }) : null;
   }
   /**
    * Get an instance of `Webview` for the current webview.
    */
   static getCurrent() {
-    return A();
+    return x();
   }
   /**
    * Gets a list of instances of `Webview` for all available webviews.
    */
   static async getAll() {
-    return ue();
+    return ge();
   }
   /**
    * Listen to an emitted event on this webview window.
@@ -2731,7 +2777,7 @@ class D {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : $(e, i, {
+    } : q(e, i, {
       target: { kind: "WebviewWindow", label: this.label }
     });
   }
@@ -2758,7 +2804,7 @@ class D {
     return this._handleTauriEvent(e, i) ? () => {
       const n = this.listeners[e];
       n.splice(n.indexOf(i), 1);
-    } : K(e, i, {
+    } : G(e, i, {
       target: { kind: "WebviewWindow", label: this.label }
     });
   }
@@ -2782,8 +2828,8 @@ class D {
     return s("plugin:window|set_background_color", { color: e }).then(() => s("plugin:webview|set_webview_background_color", { color: e }));
   }
 }
-Qe(D, [U, X]);
-function Qe(t, e) {
+Ke(W, [Q, ie]);
+function Ke(t, e) {
   (Array.isArray(e) ? e : [e]).forEach((i) => {
     Object.getOwnPropertyNames(i.prototype).forEach((n) => {
       var a;
@@ -2796,17 +2842,17 @@ function Qe(t, e) {
     });
   });
 }
-const R = /* @__PURE__ */ new Map(), Ve = () => navigator.platform.toLowerCase().includes("mac") || navigator.userAgent.toLowerCase().includes("mac"), je = (t) => {
+const F = /* @__PURE__ */ new Map(), Xe = () => navigator.platform.toLowerCase().includes("mac") || navigator.userAgent.toLowerCase().includes("mac"), et = (t) => {
   if (!t || t.trim() === "") return !1;
   try {
     return !!(t.startsWith("/") || t.startsWith("http://") || t.startsWith("https://") || t.startsWith("tauri://"));
   } catch {
     return !1;
   }
-}, Je = async () => {
+}, tt = async () => {
   let t = 1920, e = 1080;
   try {
-    const i = await Ge();
+    const i = await Ye();
     if (i?.size) {
       const n = i.scaleFactor || 1;
       t = i.size.width / n, e = i.size.height / n;
@@ -2815,16 +2861,16 @@ const R = /* @__PURE__ */ new Map(), Ve = () => navigator.platform.toLowerCase()
     console.warn("Failed to get monitor info, using defaults:", i);
   }
   return { screenWidth: t, screenHeight: e };
-}, me = async (t, e, i) => {
+}, ne = async (t, e, i) => {
   const n = i?.padding ?? 20;
   if (i?.x !== void 0 && i?.y !== void 0)
     return { x: i.x, y: i.y };
-  const { screenWidth: a, screenHeight: l } = await Je();
+  const { screenWidth: a, screenHeight: r } = await tt();
   switch (i?.position ?? "right-bottom") {
     case "right-bottom":
       return {
         x: a - t - n,
-        y: l - e - n
+        y: r - e - n
       };
     case "right-top":
       return {
@@ -2834,7 +2880,7 @@ const R = /* @__PURE__ */ new Map(), Ve = () => navigator.platform.toLowerCase()
     case "left-bottom":
       return {
         x: n,
-        y: l - e - n
+        y: r - e - n
       };
     case "left-top":
       return {
@@ -2844,224 +2890,297 @@ const R = /* @__PURE__ */ new Map(), Ve = () => navigator.platform.toLowerCase()
     case "center":
       return {
         x: (a - t) / 2,
-        y: (l - e) / 2
+        y: (r - e) / 2
       };
     default:
       return {
         x: a - t - n,
-        y: l - e - n
+        y: r - e - n
       };
   }
-}, Ze = async (t) => {
-  const e = String(t.id), i = d.getState();
+}, it = async (t) => {
+  const e = String(t.id), i = g.getState();
   if (i.isWindowActive(e)) {
     console.log(`Notice window already open for message: ${e}`);
     return;
   }
-  const n = T(), a = `notice-${e}`;
-  let l = `${n.routePrefix}/${t.type}?id=${t.id}`;
-  je(l) || (console.warn(`Invalid window URL: ${l}. Using fallback 404 page.`), l = n.notFoundUrl || "/404");
-  const r = n.autoSize ?? !0, g = t.min_width || n.defaultWidth, m = r ? n.maxHeight ?? 800 : t.min_height || n.defaultHeight, y = t.decorations ?? n.defaultDecorations ?? !0, z = t.min_height || n.defaultHeight, { x: M, y: O } = await me(g, z, t.windowPosition);
+  const n = S(), a = `notice-${e}`;
+  let r = `${n.routePrefix}/${t.type}?id=${t.id}`;
+  et(r) || (console.warn(`Invalid window URL: ${r}. Using fallback 404 page.`), r = n.notFoundUrl || "/404");
+  const o = n.autoSize ?? !0, w = t.min_width || n.defaultWidth, h = o ? n.maxHeight ?? 800 : t.min_height || n.defaultHeight, u = t.decorations ?? n.defaultDecorations ?? !0, _ = t.min_height || n.defaultHeight, { x: k, y: T } = await ne(w, _, t.windowPosition);
   try {
-    const w = {
-      url: l,
+    const y = {
+      url: r,
       title: t.title,
-      width: g,
-      height: m,
-      x: M,
-      y: O,
+      width: w,
+      height: h,
+      x: k,
+      y: T,
       resizable: !0,
       skipTaskbar: !1,
       alwaysOnTop: !0
     };
-    r && (w.visible = !1), y ? w.decorations = !0 : Ve() ? (w.decorations = !0, w.titleBarStyle = "overlay", w.hiddenTitle = !0) : (w.decorations = !1, w.transparent = !0);
-    const b = new D(a, w);
-    R.set(e, b), i.addActiveWindow(e);
-    let u = null;
-    const _ = n.loadTimeout ?? 1e4;
-    !y && _ > 0 && (u = setTimeout(async () => {
+    o && (y.visible = !1), u ? y.decorations = !0 : Xe() ? (y.decorations = !0, y.titleBarStyle = "overlay", y.hiddenTitle = !0) : (y.decorations = !1, y.transparent = !0);
+    const p = new W(a, y);
+    F.set(e, p), i.addActiveWindow(e);
+    let c = null;
+    const v = n.loadTimeout ?? 1e4;
+    !u && v > 0 && (c = setTimeout(async () => {
       console.warn(`Notice window ${a} load timeout - auto closing`);
       try {
-        await b.close();
+        await p.close();
       } catch {
       }
-    }, _)), b.once("tauri://created", () => {
-      u && (clearTimeout(u), u = null), console.log(`Notice window created successfully: ${a}`);
-    }), b.once("tauri://error", async (o) => {
-      if (console.error(`Notice window error: ${a}`, o), u && (clearTimeout(u), u = null), !y)
+    }, v)), p.once("tauri://created", () => {
+      c && (clearTimeout(c), c = null), console.log(`Notice window created successfully: ${a}`);
+    }), p.once("tauri://error", async (l) => {
+      if (console.error(`Notice window error: ${a}`, l), c && (clearTimeout(c), c = null), !u)
         try {
-          await b.close();
+          await p.close();
         } catch {
         }
-    }), b.once("tauri://destroyed", async () => {
-      u && (clearTimeout(u), u = null), R.delete(e), i.removeActiveWindow(e), await i.markMessageAsShown(e), i.clearCurrent();
-    }), console.log(`Created notice window: ${a} (autoSize: ${r}, visible: ${!r})`);
-  } catch (w) {
-    console.error("Failed to create notice window:", w), i.removeActiveWindow(e), i.clearCurrent();
+    }), p.once("tauri://destroyed", async () => {
+      c && (clearTimeout(c), c = null), F.delete(e), i.removeActiveWindow(e), await i.markMessageAsShown(e), i.clearCurrent();
+    }), console.log(`Created notice window: ${a} (autoSize: ${o}, visible: ${!o})`);
+  } catch (y) {
+    console.error("Failed to create notice window:", y), i.removeActiveWindow(e), i.clearCurrent();
   }
-}, ee = async (t) => {
-  const e = String(t), i = R.get(e), n = d.getState();
+}, se = async (t) => {
+  const e = String(t), i = F.get(e), n = g.getState();
   if (i)
     try {
-      await i.close(), R.delete(e), n.removeActiveWindow(e), await n.markMessageAsShown(e), n.clearCurrent(), console.log(`Closed notice window: ${e}`);
+      await i.close(), F.delete(e), n.removeActiveWindow(e), await n.markMessageAsShown(e), n.clearCurrent(), console.log(`Closed notice window: ${e}`);
     } catch (a) {
       console.error("Failed to close notice window:", a);
     }
-}, Ye = async () => {
-  const t = Array.from(R.keys()).map(
-    (e) => ee(e)
+}, nt = async () => {
+  const t = Array.from(F.keys()).map(
+    (e) => se(e)
   );
   await Promise.all(t);
-}, Ke = () => {
+}, st = () => {
   let t = null;
-  d.subscribe((e) => {
+  g.subscribe((e) => {
     const i = e.currentMessage;
-    i && i !== t ? (t = i, Ze(i)) : i || (t = null);
+    i && i !== t ? (t = i, it(i)) : i || (t = null);
   }), console.log("Notice window system initialized");
-}, ot = () => {
-  const t = d((i) => i.currentMessage);
-  return { closeNotice: H(async () => {
-    t && await ee(t.id);
+}, pt = () => {
+  const t = g((i) => i.currentMessage);
+  return { closeNotice: D(async () => {
+    t && await se(t.id);
   }, [t]) };
-}, lt = () => {
-  const t = d((i) => i.hideMessage);
-  return { hideNotice: H(
+}, ft = () => {
+  const t = g((i) => i.hideMessage);
+  return { hideNotice: D(
     async (i) => {
-      await t(i), await ee(i);
+      await t(i), await se(i);
     },
     [t]
   ) };
-}, ut = () => {
-  const t = d((i) => i.clearOnLogout);
-  return { hideAllNotices: H(async () => {
-    await Ye(), await t();
+}, mt = () => {
+  const t = g((i) => i.clearOnLogout);
+  return { hideAllNotices: D(async () => {
+    await nt(), await t();
   }, [t]) };
-}, ct = () => {
-  const t = d(F.queueLength), e = d(F.currentMessage), i = d(F.isProcessing), n = d(F.queue);
+}, _t = () => {
+  const t = g(B.queueLength), e = g(B.currentMessage), i = g(B.isProcessing), n = g(B.queue);
   return {
     queueLength: t,
     currentMessage: e,
     isProcessing: i,
     queue: n
   };
-}, _e = ze({ windowReady: !0 }), dt = () => Ae(_e), Xe = async (t) => {
+}, ae = () => typeof window < "u" && !!window.__TAURI__, at = async (t) => {
+  if (ae())
+    try {
+      const { emit: e } = await Promise.resolve().then(() => Se);
+      await e(`${t}-update`);
+    } catch {
+    }
+}, ot = async () => {
+  if (!ae()) return;
+  const t = S(), e = t.stackWindowLabel || "notice-stack", i = t.stackRoute || "/notice/stack", n = t.stackWindowOptions || {}, a = n.width ?? 380, r = n.height ?? 520, o = n.decorations ?? !1, w = n.resizable ?? !0, h = n.alwaysOnTop ?? !0, u = await W.getByLabel(e);
+  if (u) {
+    await u.show(), await u.unminimize();
+    return;
+  }
+  const { x: _, y: k } = await ne(a, r, n.position);
+  new W(e, {
+    url: i,
+    title: "Notifications",
+    width: a,
+    height: r,
+    x: _,
+    y: k,
+    decorations: o,
+    resizable: w,
+    alwaysOnTop: h,
+    skipTaskbar: !1
+  });
+}, vt = async (t) => {
+  const e = {
+    id: String(t.id),
+    uuid: t.uuid ? String(t.uuid) : void 0,
+    type: t.type,
+    routeType: t.routeType || t.type,
+    title: t.title,
+    data: t.data,
+    receivedAt: t.receivedAt ?? Date.now()
+  };
+  U.getState().addItem(e);
+  const n = S().stackWindowLabel || "notice-stack";
+  return await at(n), await ot(), e;
+}, rt = async () => {
+  if (!ae()) return;
+  const e = S().stackWindowLabel || "notice-stack", i = await W.getByLabel(e);
+  i && await i.close();
+}, lt = () => typeof window < "u" && !!window.__TAURI__, St = () => {
+  const t = U((r) => r.items), [, e] = C(0);
+  I(() => {
+    if (!lt()) return;
+    let r;
+    const w = S().stackWindowLabel || "notice-stack";
+    return Promise.resolve().then(() => Se).then(
+      ({ listen: h }) => h(`${w}-update`, () => {
+        e((u) => u + 1);
+      })
+    ).then((h) => {
+      r = h;
+    }).catch(() => {
+    }), () => r?.();
+  }, []);
+  const i = D((r) => {
+    Ue(r);
+  }, []), n = D(() => {
+    He();
+  }, []), a = D(async () => {
+    await rt();
+  }, []);
+  return {
+    items: t,
+    total: t.length,
+    removeItem: i,
+    clearAll: n,
+    closeWindow: a
+  };
+}, Ae = ke({ windowReady: !0 }), Wt = () => xe(Ae), ct = async (t) => {
   try {
-    const e = T(), i = e.defaultWidth || 400, n = e.maxHeight ?? 800, a = e.defaultHeight || 300, l = 32, r = Math.ceil(t) + l, g = Math.max(a, Math.min(r, n)), m = A();
-    await m.setSize(new Z(i, g));
-    const { x: y, y: z } = await me(i, g);
-    await m.setPosition(new Y(y, z)), await m.show(), console.log(`[NoticeLayout] Auto-sized window to ${i}x${g} (content=${Math.ceil(t)}, chrome=${l})`);
+    const e = S(), i = e.defaultWidth || 400, n = e.maxHeight ?? 800, a = e.defaultHeight || 300, r = 32, o = Math.ceil(t) + r, w = Math.max(a, Math.min(o, n)), h = x();
+    await h.setSize(new K(i, w));
+    const { x: u, y: _ } = await ne(i, w);
+    await h.setPosition(new X(u, _)), await h.show(), console.log(`[NoticeLayout] Auto-sized window to ${i}x${w} (content=${Math.ceil(t)}, chrome=${r})`);
   } catch (e) {
     console.error("[NoticeLayout] Failed to auto-size, showing window as-is:", e);
     try {
-      await A().show();
+      await x().show();
     } catch {
     }
   }
-}, wt = ({ children: t, onLoad: e, onClose: i }) => {
-  const [n, a] = E(null), [l, r] = E(!0), [g, m] = E(null), [y, z] = E(!1), M = ie(null), O = ie(!1), w = T(), b = w.autoSize ?? !0;
-  return P(() => {
-    b || z(!0);
-  }, [b]), P(() => {
+}, zt = ({ children: t, onLoad: e, onClose: i }) => {
+  const [n, a] = C(null), [r, o] = C(!0), [w, h] = C(null), [u, _] = C(!1), k = re(null), T = re(!1), y = S(), p = y.autoSize ?? !0;
+  return I(() => {
+    p || _(!0);
+  }, [p]), I(() => {
     (async () => {
       try {
-        const o = new URLSearchParams(window.location.search).get("id");
-        if (!o) {
-          m("No message ID provided"), r(!1), setTimeout(async () => {
+        const l = new URLSearchParams(window.location.search).get("id");
+        if (!l) {
+          h("No message ID provided"), o(!1), setTimeout(async () => {
             try {
-              await A().close();
-            } catch (v) {
-              console.error("Failed to close window:", v);
+              await x().close();
+            } catch (z) {
+              console.error("Failed to close window:", z);
             }
           }, 1e3);
           return;
         }
-        const I = await he(o);
-        if (!I) {
-          console.log(`Message ${o} not found in database, closing window`), m("Message not found"), r(!1), setTimeout(async () => {
+        const P = await _e(l);
+        if (!P) {
+          console.log(`Message ${l} not found in database, closing window`), h("Message not found"), o(!1), setTimeout(async () => {
             try {
-              await A().close();
-            } catch (v) {
-              console.error("Failed to close window:", v);
+              await x().close();
+            } catch (z) {
+              console.error("Failed to close window:", z);
             }
           }, 500);
           return;
         }
-        a(I), r(!1), e && e(I);
-      } catch (_) {
-        console.error("Failed to load message:", _), m("Failed to load message"), r(!1), setTimeout(async () => {
+        a(P), o(!1), e && e(P);
+      } catch (v) {
+        console.error("Failed to load message:", v), h("Failed to load message"), o(!1), setTimeout(async () => {
           try {
-            await A().close();
-          } catch (o) {
-            console.error("Failed to close window:", o);
+            await x().close();
+          } catch (l) {
+            console.error("Failed to close window:", l);
           }
         }, 1e3);
       }
     })();
-  }, [e]), P(() => {
-    if (!b || !n || y || O.current) return;
-    let u;
-    const _ = requestAnimationFrame(() => {
-      u = requestAnimationFrame(() => {
-        if (!M.current || O.current) return;
-        O.current = !0;
-        const o = M.current, v = T().defaultWidth || 400, N = {
-          position: o.style.position,
-          top: o.style.top,
-          left: o.style.left,
-          width: o.style.width,
-          height: o.style.height,
-          overflow: o.style.overflow
+  }, [e]), I(() => {
+    if (!p || !n || u || T.current) return;
+    let c;
+    const v = requestAnimationFrame(() => {
+      c = requestAnimationFrame(() => {
+        if (!k.current || T.current) return;
+        T.current = !0;
+        const l = k.current, z = S().defaultWidth || 400, O = {
+          position: l.style.position,
+          top: l.style.top,
+          left: l.style.left,
+          width: l.style.width,
+          height: l.style.height,
+          overflow: l.style.overflow
         };
-        o.style.position = "fixed", o.style.top = "0", o.style.left = "0", o.style.width = `${v}px`, o.style.height = "auto", o.style.overflow = "visible", o.offsetHeight;
-        const te = o.scrollHeight;
-        console.log(`[NoticeLayout] Measured content height: ${te}px (container detached at ${v}px width)`), o.style.position = N.position, o.style.top = N.top, o.style.left = N.left, o.style.width = N.width, o.style.height = N.height, o.style.overflow = N.overflow, Xe(te).then(() => {
-          z(!0);
+        l.style.position = "fixed", l.style.top = "0", l.style.left = "0", l.style.width = `${z}px`, l.style.height = "auto", l.style.overflow = "visible", l.offsetHeight;
+        const oe = l.scrollHeight;
+        console.log(`[NoticeLayout] Measured content height: ${oe}px (container detached at ${z}px width)`), l.style.position = O.position, l.style.top = O.top, l.style.left = O.left, l.style.width = O.width, l.style.height = O.height, l.style.overflow = O.overflow, ct(oe).then(() => {
+          _(!0);
         });
       });
     });
     return () => {
-      cancelAnimationFrame(_), u !== void 0 && cancelAnimationFrame(u);
+      cancelAnimationFrame(v), c !== void 0 && cancelAnimationFrame(c);
     };
-  }, [b, n, y]), P(() => {
-    if (!b || y) return;
-    const u = w.autoSizeTimeout ?? 3e3, _ = setTimeout(async () => {
-      if (!y) {
+  }, [p, n, u]), I(() => {
+    if (!p || u) return;
+    const c = y.autoSizeTimeout ?? 3e3, v = setTimeout(async () => {
+      if (!u) {
         console.warn("[NoticeLayout] Auto-size timeout reached, showing window as-is");
         try {
-          await A().show();
+          await x().show();
         } catch {
         }
-        z(!0);
+        _(!0);
       }
-    }, u);
-    return () => clearTimeout(_);
-  }, [b, y, w.autoSizeTimeout]), P(() => {
+    }, c);
+    return () => clearTimeout(v);
+  }, [p, u, y.autoSizeTimeout]), I(() => {
     if (!n || !i) return;
-    const u = () => {
+    const c = () => {
       i(n);
     };
-    return window.addEventListener("beforeunload", u), () => window.removeEventListener("beforeunload", u);
-  }, [n, i]), l ? /* @__PURE__ */ C("div", { style: {
+    return window.addEventListener("beforeunload", c), () => window.removeEventListener("beforeunload", c);
+  }, [n, i]), r ? /* @__PURE__ */ L("div", { style: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     height: "100vh",
     fontFamily: "system-ui, -apple-system, sans-serif"
-  }, children: "Loading..." }) : g ? /* @__PURE__ */ C("div", { style: {
+  }, children: "Loading..." }) : w ? /* @__PURE__ */ L("div", { style: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     height: "100vh",
     fontFamily: "system-ui, -apple-system, sans-serif",
     color: "#ef4444"
-  }, children: g }) : n ? /* @__PURE__ */ C(_e.Provider, { value: { windowReady: y }, children: /* @__PURE__ */ C(
+  }, children: w }) : n ? /* @__PURE__ */ L(Ae.Provider, { value: { windowReady: u }, children: /* @__PURE__ */ L(
     "div",
     {
-      ref: M,
-      style: y ? { height: "100vh" } : void 0,
+      ref: k,
+      style: u ? { height: "100vh" } : void 0,
       children: t(n)
     }
-  ) }) : /* @__PURE__ */ C("div", { style: {
+  ) }) : /* @__PURE__ */ L("div", { style: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -3069,41 +3188,48 @@ const R = /* @__PURE__ */ new Map(), Ve = () => navigator.platform.toLowerCase()
     fontFamily: "system-ui, -apple-system, sans-serif",
     color: "#ef4444"
   }, children: "Closing window..." });
-}, ht = async () => {
-  we(), Ke();
-  const { initializeFromDatabase: t } = d.getState();
+}, At = async () => {
+  me(), st();
+  const { initializeFromDatabase: t } = g.getState();
   await t(), console.log("Tauri Notice System initialized");
-}, gt = async (t) => {
-  await d.getState().deleteMessage(t);
-}, yt = async (t) => {
-  await d.getState().hideMessage(t);
-}, bt = async (t) => {
-  await d.getState().markMessageAsShown(t);
+}, Nt = async (t) => {
+  await g.getState().deleteMessage(t);
+}, kt = async (t) => {
+  await g.getState().hideMessage(t);
+}, xt = async (t) => {
+  await g.getState().markMessageAsShown(t);
 };
 export {
-  wt as NoticeLayout,
-  me as calculateWindowPosition,
-  Ye as closeAllNoticeWindows,
-  ee as closeNoticeWindow,
-  Ze as createNoticeWindow,
-  gt as deleteMessageById,
-  Je as getLogicalScreenSize,
-  he as getMessage,
-  T as getNoticeConfig,
-  Ie as getPendingMessages,
-  yt as hideMessageById,
-  we as initializeDatabase,
-  ht as initializeNoticeSystem,
-  Ke as initializeNoticeWindowSystem,
-  bt as markMessageAsShown,
-  F as messageQueueSelectors,
-  at as setNoticeConfig,
-  ot as useCloseNotice,
-  ut as useHideAllNotices,
-  lt as useHideNotice,
-  ct as useMessageQueue,
-  d as useMessageQueueStore,
-  rt as useNoticeWindow,
-  dt as useNoticeWindowContext
+  zt as NoticeLayout,
+  ne as calculateWindowPosition,
+  He as clearNoticeStack,
+  nt as closeAllNoticeWindows,
+  rt as closeNoticeStackWindow,
+  se as closeNoticeWindow,
+  it as createNoticeWindow,
+  Nt as deleteMessageById,
+  ot as ensureStackWindow,
+  tt as getLogicalScreenSize,
+  _e as getMessage,
+  S as getNoticeConfig,
+  Pe as getPendingMessages,
+  kt as hideMessageById,
+  me as initializeDatabase,
+  At as initializeNoticeSystem,
+  st as initializeNoticeWindowSystem,
+  xt as markMessageAsShown,
+  B as messageQueueSelectors,
+  vt as pushToNoticeStack,
+  Ue as removeFromNoticeStack,
+  yt as setNoticeConfig,
+  pt as useCloseNotice,
+  mt as useHideAllNotices,
+  ft as useHideNotice,
+  _t as useMessageQueue,
+  g as useMessageQueueStore,
+  St as useNoticeStack,
+  U as useNoticeStackStore,
+  bt as useNoticeWindow,
+  Wt as useNoticeWindowContext
 };
 //# sourceMappingURL=index.js.map
